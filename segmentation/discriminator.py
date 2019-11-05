@@ -1,4 +1,4 @@
-from GroupNorm3D import GroupNormalization
+from segmentation.GroupNorm3D import GroupNormalization
 
 from keras.layers import Input, Concatenate, Add
 from keras.layers.core import Activation

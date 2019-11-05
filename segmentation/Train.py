@@ -16,8 +16,8 @@ import scipy.misc
 import numpy as np
 from collections import deque
 
-from generator import train_generator, validation_generator
-from segmenter import PCANet
+from segmentation.generator import train_generator, validation_generator
+from segmentation.segmenter import PCANet
 from discriminator import FCDiscriminator
 
 from keras.layers import Input, Lambda

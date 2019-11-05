@@ -17,13 +17,13 @@ import h5py
 import time
 import scipy.io as sio
 import SimpleITK as sitk
-from segmenter import PCANet
+from segmentation.segmenter import PCANet
 from keras import backend as K
 from keras.layers import Input, Lambda
 from keras.models import Model
 import tensorflow as tf
 
-from losses import hybrid_loss
+from segmentation.losses import hybrid_loss
 
 TEST_DATA_FOLDER = '/shenlab/lab_stor4/work1/xiaoyang/CBCT_Segmentation_Xiaoyang' # Do NOT end with '/'
 NUM_CLASSES = 3
