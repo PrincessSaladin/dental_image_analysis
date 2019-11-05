@@ -18,7 +18,7 @@ from collections import deque
 
 from segmentation.generator import train_generator, validation_generator
 from segmentation.segmenter import PCANet
-from discriminator import FCDiscriminator
+from segmentation.discriminator import FCDiscriminator
 
 from keras.layers import Input, Lambda
 from keras.models import Model
@@ -28,7 +28,7 @@ from keras.optimizers import Adam
 import keras.backend as K
 import tensorflow as tf
 
-from losses import hybrid_loss
+from segmentation.losses import hybrid_loss
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -117,7 +117,6 @@ def get_arguments():
 args = get_arguments()
 
 def main():
-    
     if args.use_deque:
         losses = deque(maxlen=args.capacity)
     else:

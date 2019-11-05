@@ -32,7 +32,7 @@ def custom_categorical_crossentropy(gt, pred, mask):
     # manual computation of crossentropy
     epsilon = 1e-6
     pred = tf.clip_by_value(pred, epsilon, 1. - epsilon)
-    return - tf.reduce_mean(gt * tf.log(pred) + (1. - gt) * tf.log(1. - pred), name='crossentropy')
+    return - tf.reduce_mean(gt * tf.math.log(pred) + (1. - gt) * tf.math.log(1. - pred), name='crossentropy')
 
 def hybrid_loss(gt, pred, mask):
     return dice_loss(gt, pred, mask) + custom_categorical_crossentropy(gt, pred, mask)

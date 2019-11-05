@@ -91,7 +91,8 @@ def test(batch_size=1):
     
     save_path = './results_pcanet/'
 
-    filenames = list(os.walk(TEST_DATA_FOLDER)[0][2])
+    filepaths = os.walk(TEST_DATA_FOLDER)
+    filenames = list(filepaths[0][2])
     filenames = [x for x in filenames if x.endswith('.nii.gz')]
     filenames = sorted(filenames)
     

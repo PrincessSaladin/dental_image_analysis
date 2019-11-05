@@ -7,7 +7,7 @@ from keras.layers.pooling import MaxPooling3D, GlobalAveragePooling3D
 from keras import backend as K  
 from keras.models import Model
 
-from losses import hybrid_loss
+from segmentation.losses import hybrid_loss
 
 class conv_block:
     def __init__(self, in_channels, inter_channels, out_channels, name='cb', **kwargs):
