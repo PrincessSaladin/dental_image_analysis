@@ -25,7 +25,7 @@ import tensorflow as tf
 
 from segmentation.losses import hybrid_loss
 
-TEST_DATA_FOLDER = '/shenlab/lab_stor4/work1/xiaoyang/CBCT_Segmentation_Xiaoyang' # Do NOT end with '/'
+TEST_DATA_FOLDER = '/shenlab/lab_stor4/work1/xiaoyang/CBCT_Segmentation_Xiaoyang/images_nii' # Do NOT end with '/'
 NUM_CLASSES = 3
 
 def corrected_crop(array, image_size):
@@ -91,7 +91,7 @@ def test(batch_size=1):
     
     save_path = './results_pcanet/'
 
-    filepaths = list(os.walk(os.path.join(TEST_DATA_FOLDER, 'images_nii')))
+    filepaths = list(os.walk(TEST_DATA_FOLDER))
     filenames = filepaths[0][2]
     filenames = [x for x in filenames if x.endswith('.nii.gz')]
     filenames = sorted(filenames)
