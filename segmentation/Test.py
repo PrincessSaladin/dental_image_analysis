@@ -28,6 +28,9 @@ from segmentation.losses import hybrid_loss
 TEST_DATA_FOLDER = '/shenlab/lab_stor4/work1/xiaoyang/CBCT_Segmentation_Xiaoyang/images_nii' # Do NOT end with '/'
 NUM_CLASSES = 3
 
+# debug only
+os.environ['CUDA_VISIBLE_DEVICES']='1'
+
 def corrected_crop(array, image_size):
     array_ = array.copy()
     image_size_ = image_size.copy()
@@ -89,7 +92,7 @@ def test(batch_size=1):
     assert np.all(np.mod(patch_size, 2**num_of_downpooling)) == 0
     stride = patch_size/patch_stride_regulator
     
-    save_path = './results_pcanet/'
+    save_path = '/shenlab/lab_stor4/work1/qinliu/results/baseline'
 
     filepaths = list(os.walk(TEST_DATA_FOLDER))
     filenames = filepaths[0][2]
@@ -117,11 +120,12 @@ def test(batch_size=1):
     
     model.compile(optimizer='Adam', loss=[None] * len(model.outputs))
     
-    model.load_weights('./checkpoints/pcanet_model1_best.h5')
+    model.load_weights('/shenlab/lab_stor4/work1/qinliu/models/baseline/supervised_model1_best.h5')
     
     for j in range(len(filenames)): ## should be changed to 2 ##
         subject_name = filenames[j]
-        
+        print('Test Case Name: {}'.format(subject_name))
+
         ### compute basic parameter for usage later
         image = sitk.ReadImage(os.path.join(TEST_DATA_FOLDER, subject_name))
         image = sitk.GetArrayFromImage(image)
@@ -323,4 +327,3 @@ numofclasses = 3
 input_channel = 3
 
 test(batch_size=1)
-
