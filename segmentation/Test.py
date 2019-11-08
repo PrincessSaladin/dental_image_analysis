@@ -7,29 +7,17 @@ Created on Tue Feb  6 16:30:26 2018
 """
 
 from __future__ import print_function
-import os
-import sys
-
-sys.path.append(os.getcwd())
-
-import numpy as np
-import h5py
-import time
-import scipy.io as sio
-import SimpleITK as sitk
-from segmentation.segmenter import PCANet
-from keras import backend as K
 from keras.layers import Input, Lambda
 from keras.models import Model
-import tensorflow as tf
+import numpy as np
+import os
+import sys
+sys.path.append(os.getcwd())
+import SimpleITK as sitk
 
 from segmentation.losses import hybrid_loss
+from segmentation.segmenter import PCANet
 
-TEST_DATA_FOLDER = '/shenlab/lab_stor4/work1/xiaoyang/CBCT_Segmentation_Xiaoyang/images_nii' # Do NOT end with '/'
-NUM_CLASSES = 3
-
-# debug only
-os.environ['CUDA_VISIBLE_DEVICES']='1'
 
 def corrected_crop(array, image_size):
     array_ = array.copy()
@@ -79,10 +67,10 @@ def corrected_crop(array, image_size):
     else:
         copy_from[5] = int(array_[5])
         copy_to[5] = None
-
+    
     return copy_from, copy_to
 
-def test(batch_size=1):
+def test(image_folder, save_path, num_in_channel=3, num_classes=3, batch_size=1):
     # the following parameters need to be assigned values before training
     batch_size = batch_size # very important
     size_ = 64
@@ -92,24 +80,22 @@ def test(batch_size=1):
     assert np.all(np.mod(patch_size, 2**num_of_downpooling)) == 0
     stride = patch_size/patch_stride_regulator
     
-    save_path = '/shenlab/lab_stor4/work1/qinliu/results/baseline'
-
-    filepaths = list(os.walk(TEST_DATA_FOLDER))
+    filepaths = list(os.walk(image_folder))
     filenames = filepaths[0][2]
     filenames = [x for x in filenames if x.endswith('.nii.gz')]
     filenames = sorted(filenames)
     
     # test_subject_list =  [1, 7, 8, 9, 10]
-
-    segmenter = PCANet(numofclasses=numofclasses)
+    
+    segmenter = PCANet(numofclasses=num_classes)
     
     # Segmentation network
     input1 = Input((1, size_, size_, size_), name='input_1')
     input2 = Input((1, 2*size_, 2*size_, 2*size_), name='input_2')
     input3 = Input((1, 4*size_, 4*size_, 4*size_), name='input_3')
     
-    gt = Input((NUM_CLASSES, size_, size_, size_), name='gt')
-    mask = Input((NUM_CLASSES, size_, size_, size_), name='mask')
+    gt = Input((num_classes, size_, size_, size_), name='gt')
+    mask = Input((num_classes, size_, size_, size_), name='mask')
     
     segmentation = segmenter(input1, input2, input3)
     
@@ -125,9 +111,9 @@ def test(batch_size=1):
     for j in range(len(filenames)): ## should be changed to 2 ##
         subject_name = filenames[j]
         print('Test Case Name: {}'.format(subject_name))
-
+        
         ### compute basic parameter for usage later
-        image = sitk.ReadImage(os.path.join(TEST_DATA_FOLDER, subject_name))
+        image = sitk.ReadImage(os.path.join(image_folder, subject_name))
         image = sitk.GetArrayFromImage(image)
         
         image_size = np.array(np.shape(image))
@@ -140,11 +126,11 @@ def test(batch_size=1):
         #expanded_image_mean = np.mean(expanded_image)
         #expanded_image_std = np.std(expanded_image)
         #expanded_image = (expanded_image - expanded_image_mean)/expanded_image_std
-
-        predicted_seg = np.zeros([numofclasses, expanded_image_size[0], expanded_image_size[1], expanded_image_size[2]], dtype=np.float32)
-
-        count_matrix_seg = np.zeros([numofclasses, expanded_image_size[0], expanded_image_size[1], expanded_image_size[2]], dtype=np.float32)
-
+        
+        predicted_seg = np.zeros([num_classes, expanded_image_size[0], expanded_image_size[1], expanded_image_size[2]], dtype=np.float32)
+        
+        count_matrix_seg = np.zeros([num_classes, expanded_image_size[0], expanded_image_size[1], expanded_image_size[2]], dtype=np.float32)
+        
         num_of_patch_with_overlapping = (expanded_image_size/stride - patch_stride_regulator + 1).astype(np.int16)
         
         total_num_of_patches = np.prod(num_of_patch_with_overlapping)
@@ -154,7 +140,7 @@ def test(batch_size=1):
         num_patch_x = num_of_patch_with_overlapping[2] # used for get patches
         
         print("total number of patches in the image is {0}".format(total_num_of_patches))
-    
+        
         center = np.zeros([total_num_of_patches, 3]) ## in the order of (total_num_of_patches, 3) ## (384, 3) ##
         
         patch_index = 0
@@ -169,7 +155,7 @@ def test(batch_size=1):
                                                     int((kk + patch_stride_regulator[2]//2)*stride[2])])
                     patch_index += 1
         
-
+        
         for idx in range(total_num_of_patches):
             image_one = np.zeros([size_, size_, size_], dtype=np.float32)
             
@@ -202,11 +188,11 @@ def test(batch_size=1):
                 cf_x_higher_bound = None
             
             image_one[int(copy_to[0]):copy_to[1],
-                      int(copy_to[2]):copy_to[3],
-                      int(copy_to[4]):copy_to[5]] = \
-                      expanded_image[cf_z_lower_bound:cf_z_higher_bound,
-                                     cf_y_lower_bound:cf_y_higher_bound,
-                                     cf_x_lower_bound:cf_x_higher_bound]
+            int(copy_to[2]):copy_to[3],
+            int(copy_to[4]):copy_to[5]] = \
+                expanded_image[cf_z_lower_bound:cf_z_higher_bound,
+                cf_y_lower_bound:cf_y_higher_bound,
+                cf_x_lower_bound:cf_x_higher_bound]
             
             image_one = np.expand_dims(image_one, axis=0)
             
@@ -240,13 +226,13 @@ def test(batch_size=1):
                 cf_x_higher_bound = int(copy_from[5])
             else:
                 cf_x_higher_bound = None
-
+            
             image_two[int(copy_to[0]):copy_to[1],
-                      int(copy_to[2]):copy_to[3],
-                      int(copy_to[4]):copy_to[5]] = \
-                      expanded_image[cf_z_lower_bound:cf_z_higher_bound,
-                                     cf_y_lower_bound:cf_y_higher_bound,
-                                     cf_x_lower_bound:cf_x_higher_bound]
+            int(copy_to[2]):copy_to[3],
+            int(copy_to[4]):copy_to[5]] = \
+                expanded_image[cf_z_lower_bound:cf_z_higher_bound,
+                cf_y_lower_bound:cf_y_higher_bound,
+                cf_x_lower_bound:cf_x_higher_bound]
             
             # image_two = nd.interpolation.zoom(image_two, zoom=0.5, order=1)
             image_two = np.expand_dims(image_two, axis=0)
@@ -269,7 +255,7 @@ def test(batch_size=1):
                 cf_z_higher_bound = int(copy_from2[1])
             else:
                 cf_z_higher_bound = None
-                
+            
             cf_y_lower_bound = int(copy_from2[2])
             if copy_from2[3] is not None:
                 cf_y_higher_bound = int(copy_from2[3])
@@ -281,49 +267,51 @@ def test(batch_size=1):
                 cf_x_higher_bound = int(copy_from2[5])
             else:
                 cf_x_higher_bound = None
-
+            
             image_three[int(copy_to2[0]):copy_to2[1],
-                        int(copy_to2[2]):copy_to2[3],
-                        int(copy_to2[4]):copy_to2[5]] = \
-                        expanded_image[cf_z_lower_bound:cf_z_higher_bound,
-                                       cf_y_lower_bound:cf_y_higher_bound,
-                                       cf_x_lower_bound:cf_x_higher_bound]
-
+            int(copy_to2[2]):copy_to2[3],
+            int(copy_to2[4]):copy_to2[5]] = \
+                expanded_image[cf_z_lower_bound:cf_z_higher_bound,
+                cf_y_lower_bound:cf_y_higher_bound,
+                cf_x_lower_bound:cf_x_higher_bound]
+            
             # image_three = nd.interpolation.zoom(image_three, zoom=0.25, order=1)
             image_three = np.expand_dims(image_three, axis=0)
-
+            
             image_1 = np.expand_dims(image_one, axis=0)
             image_2 = np.expand_dims(image_two, axis=0)
             image_3 = np.expand_dims(image_three, axis=0)
             
             ## output batch ##
-            fake_gt = np.zeros([batch_size, NUM_CLASSES, size_, size_, size_], dtype=np.int32)
-            mask = np.ones([batch_size, NUM_CLASSES, size_, size_, size_], dtype=np.int32)
+            fake_gt = np.zeros([batch_size, num_classes, size_, size_, size_], dtype=np.int32)
+            mask = np.ones([batch_size, num_classes, size_, size_, size_], dtype=np.int32)
             predicted_one, _ = model.predict([image_1, image_2, image_3, fake_gt, mask])
             print(predicted_one.shape)
             
             predicted_seg[:, np.int16(center[idx][0] - patch_size[0]//2):np.int16(center[idx][0] + patch_size[0]//2),
-                            np.int16(center[idx][1] - patch_size[1]//2):np.int16(center[idx][1] + patch_size[1]//2),
-                            np.int16(center[idx][2] - patch_size[2]//2):np.int16(center[idx][2] + patch_size[2]//2)] += predicted_one[0]
-
+            np.int16(center[idx][1] - patch_size[1]//2):np.int16(center[idx][1] + patch_size[1]//2),
+            np.int16(center[idx][2] - patch_size[2]//2):np.int16(center[idx][2] + patch_size[2]//2)] += predicted_one[0]
+            
             count_matrix_seg[:, np.int16(center[idx][0] - patch_size[0]//2):np.int16(center[idx][0] + patch_size[0]//2),
-                            np.int16(center[idx][1] - patch_size[1]//2):np.int16(center[idx][1] + patch_size[1]//2),
-                            np.int16(center[idx][2] - patch_size[2]//2):np.int16(center[idx][2] + patch_size[2]//2)] += 1.0
-
+            np.int16(center[idx][1] - patch_size[1]//2):np.int16(center[idx][1] + patch_size[1]//2),
+            np.int16(center[idx][2] - patch_size[2]//2):np.int16(center[idx][2] + patch_size[2]//2)] += 1.0
+        
         predicted_seg_ = predicted_seg/(1.0*count_matrix_seg)
         
         output_seg = predicted_seg_[:, 0:image_size[0], 0:image_size[1], 0:image_size[2]]
-
+        
         output_label = np.argmax(output_seg, axis=0)
         output_image_to_save = sitk.GetImageFromArray(output_label.astype(np.float32))
+        
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        
+        sitk.WriteImage(output_image_to_save, os.path.join(save_path, subject_name))
 
-        if not os.path.exists(save_path + 'segmentation/subject_name[:-7]'):
-            os.makedirs(save_path + 'segmentation/subject_name[:-7]')
 
-        sitk.WriteImage(output_image_to_save, save_path + 'segmentation/' + 'subject_name[:-7]/' + subject_name)
-
-batchsize =1
-numofclasses = 3
-input_channel = 3
-
-test(batch_size=1)
+if __name__ == '__main__':
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    
+    image_folder = '/shenlab/lab_stor4/work1/xiaoyang/CBCT_Segmentation_Xiaoyang/images_nii'
+    save_folder = '/shenlab/lab_stor4/work1/qinliu/results/baseline/segmentation'
+    test(image_folder, save_folder)
