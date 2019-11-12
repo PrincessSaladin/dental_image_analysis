@@ -362,9 +362,53 @@ def convert_case_44():
   cio.write_image(seg, seg_path, dtype=np.int8, compression=True)
 
 
+def dataset_split():
+  data_folder = '/shenlab/lab_stor6/qinliu/CT_Dental/data'
+  dropped_cases_idx = [33, 45, 53, 55, 84, 88, 89, 104, 106, 108, 109]
+  valid_cases = []
+  for file in os.listdir(data_folder):
+    if file.find('case') >= 0:
+      is_dropped = False
+      for idx in dropped_cases_idx:
+        if file.find('case_{}'.format(idx)) >= 0:
+          is_dropped = True
+          break
+      
+      if not is_dropped:
+        valid_cases.append(file)
+  
+  # dataset split
+  valid_cases.sort()
+  num_training = int(len(valid_cases)*0.8)
+
+  training_set = valid_cases[:num_training]
+  testing_set = valid_cases[num_training:]
+
+  print(training_set)
+  print(testing_set)
+  
+  datasets_folder = '/shenlab/lab_stor6/qinliu/CT_Dental/datasets'
+  training_set_file = os.path.join(datasets_folder, 'train.txt')
+  with open(training_set_file, 'w') as fp:
+    name_text = ''
+    for file in training_set:
+      name_text = name_text + os.path.join(data_folder, file, 'org.mha') + '\n'
+      name_text = name_text + os.path.join(data_folder, file, 'seg.mha') + '\n'
+
+    fp.write(str(len(training_set)) + '\n' + name_text)
+
+  testing_set_file = os.path.join(datasets_folder, 'test.txt')
+  with open(testing_set_file, 'w') as fp:
+    name_text = ''
+    for file in testing_set:
+      name_text += file + ' ' + os.path.join(data_folder, file) + '\n'
+      
+    fp.write(str(len(testing_set)) + '\n' + name_text)
+
+
 if __name__ == "__main__":
   
-  datasets = [0]
+  datasets = [6]
   
   if 1 in datasets:
     rename_files_for_dataset1()
@@ -381,3 +425,6 @@ if __name__ == "__main__":
     
   if 5 in datasets:
     convert_case_44()
+    
+  if 6 in datasets:
+    dataset_split()
