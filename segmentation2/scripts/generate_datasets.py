@@ -350,6 +350,18 @@ def rename_files_for_dataset4():
   assert idx == 181
 
 
+# convert case 44
+def convert_case_44():
+  seg_path = '/shenlab/lab_stor6/qinliu/CT_Dental/data/case_44_cbct_patient/seg.mha'
+  
+  seg = cio.read_image(seg_path)
+  seg_npy = seg.to_numpy()
+  seg_npy[seg_npy == 2] = 1
+  seg.from_numpy(seg_npy)
+  
+  cio.write_image(seg, seg_path, dtype=np.int8, compression=True)
+
+
 if __name__ == "__main__":
   
   datasets = [0]
@@ -366,3 +378,6 @@ if __name__ == "__main__":
     
   if 4 in datasets:
     rename_files_for_dataset4()
+    
+  if 5 in datasets:
+    convert_case_44()
