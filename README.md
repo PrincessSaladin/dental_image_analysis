@@ -1,5 +1,11 @@
 # dental_image_analysis
-Recommended version of packages:
-python: 3.7
-tensorflow: 2.0.0
-keras: 2.3.1
+Folders:
+  detection: landmark detection
+  segmentation: midface and mandible segmentation using tensorflow
+  segmentation2: midface and mandible segmentation using pytorch
+
+Requirements:
+  python: 3.7
+  tensorflow: 2.0.0
+  pytorch:1.3.0
+  keras: 2.3.1
