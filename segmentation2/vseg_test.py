@@ -1,5 +1,4 @@
 import argparse
-import os
 
 from md_segmentation3d.vseg_apply import segmentation
 
@@ -7,7 +6,6 @@ from md_segmentation3d.vseg_apply import segmentation
 def main():
   from argparse import RawTextHelpFormatter
   
-  # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
   
   long_description = 'Segmentation3d Batch Testing Engine\n\n' \
                      'It supports multiple kinds of input:\n' \
