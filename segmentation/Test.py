@@ -120,7 +120,7 @@ def test(batch_size=1):
     
     model.compile(optimizer='Adam', loss=[None] * len(model.outputs))
     
-    model.load_weights('/shenlab/lab_stor4/work1/qinliu/models/baseline/supervised_model1_best.h5')
+    model.load_weights('/shenlab/lab_stor4/work1/qinliu/models/baseline/supervised_model2_best.h5')
     
     for j in range(len(filenames)): ## should be changed to 2 ##
         subject_name = filenames[j]
@@ -317,10 +317,10 @@ def test(batch_size=1):
         output_label = np.argmax(output_seg, axis=0)
         output_image_to_save = sitk.GetImageFromArray(output_label.astype(np.float32))
 
-        if not os.path.exists(save_path + 'segmentation/subject_name[:-7]'):
-            os.makedirs(save_path + 'segmentation/subject_name[:-7]')
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
 
-        sitk.WriteImage(output_image_to_save, save_path + 'segmentation/' + 'subject_name[:-7]/' + subject_name)
+        sitk.WriteImage(output_image_to_save, os.path.join(save_path, subject_name))
 
 batchsize =1
 numofclasses = 3
