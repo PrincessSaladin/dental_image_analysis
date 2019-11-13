@@ -21,7 +21,7 @@ def main():
                                    formatter_class=RawTextHelpFormatter)
   
   parser.add_argument('-i', '--input',
-                      default=r'/shenlab/lab_stor6/qinliu/CT_Dental/data',
+                      default=r'/shenlab/lab_stor6/qinliu/CT_Dental/results/model_1112_2019_epoch3700',
                       help='the top-level folder')
   
   parser.add_argument('-c', '--config',
@@ -29,7 +29,7 @@ def main():
                       help='the config file for batch visualization')
   
   parser.add_argument('-o', '--output',
-                      default=r'/shenlab/lab_stor6/qinliu/CT_Dental/data_check/label_mandible',
+                      default=r'/shenlab/lab_stor6/qinliu/CT_Dental/results/model_1112_2019_epoch3700_html_report',
                       help='the output folder')
   
   parser.add_argument('--intensity-name',

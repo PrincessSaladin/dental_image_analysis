@@ -401,7 +401,8 @@ def dataset_split():
   with open(testing_set_file, 'w') as fp:
     name_text = ''
     for file in testing_set:
-      name_text += file + ' ' + os.path.join(data_folder, file) + '\n'
+      file_path = os.path.join(data_folder, file, 'org.mha')
+      name_text += file + ' ' + file_path + '\n'
       
     fp.write(str(len(testing_set)) + '\n' + name_text)
 
