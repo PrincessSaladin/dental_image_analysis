@@ -397,6 +397,16 @@ def dataset_split():
 
     fp.write(str(len(training_set)) + '\n' + name_text)
 
+  training_set_for_testing_file = \
+    os.path.join(datasets_folder, 'train_for_testing.txt')
+  with open(training_set_for_testing_file, 'w') as fp:
+    name_text = ''
+    for file in training_set:
+      file_path = os.path.join(data_folder, file, 'org.mha')
+      name_text += file + ' ' + file_path + '\n'
+
+    fp.write(str(len(training_set)) + '\n' + name_text)
+
   testing_set_file = os.path.join(datasets_folder, 'test.txt')
   with open(testing_set_file, 'w') as fp:
     name_text = ''
