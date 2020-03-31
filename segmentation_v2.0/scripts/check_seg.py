@@ -6,7 +6,7 @@ def main():
   from argparse import RawTextHelpFormatter
   
   long_description = \
-    'Batch visualize segmentation results ' \
+    'Batch visualize segmentation_v1.0 results ' \
     'from all cases in the folder\n' \
     'The folder structure should be like:\n' \
     'Top-folder\n' \
@@ -36,9 +36,9 @@ def main():
                       default='org.mha',
                       help='the full name of output intensity image')
   
-  parser.add_argument('--segmentation-name',
+  parser.add_argument('--segmentation_v1.0-name',
                       default='seg.mha',
-                      help='the full name of output segmentation')
+                      help='the full name of output segmentation_v1.0')
   
   parser.add_argument('--method',
                       default='2',

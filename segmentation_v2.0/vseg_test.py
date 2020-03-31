@@ -23,10 +23,10 @@ def main():
                       help='model root folder',
                       default='/shenlab/lab_stor6/qinliu/CT_Dental/models/model_1112_2019')
   parser.add_argument('-o', '--output', type=str,
-                      help='output folder for segmentation',
+                      help='output folder for segmentation_v1.0',
                       default='/shenlab/lab_stor6/qinliu/CT_Dental/results/model_1112_2019_epoch3700')
   parser.add_argument('-n', '--seg_name', default='seg.mha',
-                      help='the name of the segmentation result to be saved')
+                      help='the name of the segmentation_v1.0 result to be saved')
   parser.add_argument('-g', '--gpu_id', default='0',
                       help='the gpu id to run model')
   parser.add_argument('--save_image', default=True,

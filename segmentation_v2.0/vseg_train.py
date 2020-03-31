@@ -10,7 +10,7 @@ def main():
   
   parser = argparse.ArgumentParser()
   parser.add_argument('-i', '--input', nargs='?',
-                      default='/home/qinliu19/projects/dental_image_analysis/segmentation2/config/config.py',
+                      default='/home/qinliu19/projects/dental_image_analysis/segmentation_v2.0/config/config.py',
                       help='volumetric segmentation3d train config file')
   args = parser.parse_args()
   train(args.input)

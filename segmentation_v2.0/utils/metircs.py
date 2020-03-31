@@ -3,12 +3,12 @@ import numpy as np
 
 def cal_dsc_binary(gt_npy, seg_npy):
   """
-  Calculate dice for binary segmentation
+  Calculate dice for binary segmentation_v1.0
   :param gt_npy:   the numpy of ground truth
-  :param seg_npy:  the numpy of segmentation result
+  :param seg_npy:  the numpy of segmentation_v1.0 result
   :return:
-    Dice: the dice ratio, 1 for perfect segmentation, 0 for missing.
-    Type: segmentation type, 'TP' for True Positive, 'TN' for True Negative,
+    Dice: the dice ratio, 1 for perfect segmentation_v1.0, 0 for missing.
+    Type: segmentation_v1.0 type, 'TP' for True Positive, 'TN' for True Negative,
           'FP' for False Positive, 'FN' for False Negative
   """
   isinstance(gt_npy, np.ndarray)
