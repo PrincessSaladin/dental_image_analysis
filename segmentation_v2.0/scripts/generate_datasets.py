@@ -432,9 +432,33 @@ def dataset_split():
     fp.write(str(len(testing_set)) + '\n' + name_text)
 
 
+def data_identity_check():
+  data_folder = '/home/qinliu/projects/CT_Dental/data'
+  data_debug_folder = '/home/qinliu/projects/CT_Dental/data_debug'
+
+  files = os.listdir(data_folder)
+  for file in files:
+    basename = os.path.basename(file)
+    if basename.find('case') == 0:
+      print(basename)
+      data_img = sitk.ReadImage(os.path.join(data_folder, basename, 'org.mha'))
+      data_img_npy = sitk.GetArrayFromImage(data_img)
+      
+      data_debug_img = sitk.ReadImage(os.path.join(data_debug_folder, basename, 'org.mha'))
+      data_debug_img_npy = sitk.GetArrayFromImage(data_debug_img)
+      assert np.max(data_debug_img_npy - data_img_npy) < 1e-6
+      
+      data_seg = sitk.ReadImage(os.path.join(data_folder, basename, 'seg.mha'))
+      data_seg_npy = sitk.GetArrayFromImage(data_seg)
+      
+      data_debug_seg = sitk.ReadImage(os.path.join(data_debug_folder, basename, 'seg.mha'))
+      data_debug_seg_npy = sitk.GetArrayFromImage(data_debug_seg)
+      assert np.max(data_debug_seg_npy - data_seg_npy) < 1e-6
+
+
 if __name__ == "__main__":
   
-  datasets = [6, 7]
+  datasets = [8]
   
   if 1 in datasets:
     rename_files_for_dataset1()
@@ -456,3 +480,6 @@ if __name__ == "__main__":
 
   if 7 in datasets:
     dataset_split()
+    
+  if 8 in datasets:
+    data_identity_check()
