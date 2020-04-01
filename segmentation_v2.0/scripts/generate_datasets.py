@@ -456,30 +456,58 @@ def data_identity_check():
       assert np.max(data_debug_seg_npy - data_seg_npy) < 1e-6
 
 
+def merge_all_path_files_into_a_sigle_file():
+  files_folder = '/home/qinliu/projects/CT_Dental/data_debug/'
+  file1 = os.path.join(files_folder, 'path1.csv')
+  df = pd.read_csv(file1, usecols=[1,2], header=None, skiprows=[0])
+  
+  file2 = os.path.join(files_folder, 'path2.csv')
+  df2 = pd.read_csv(file2, usecols=[1,2], header=None, skiprows=[0])
+  df = df.append(df2, sort=False)
+  
+  file3 = os.path.join(files_folder, 'path2_fix.csv')
+  df3 = pd.read_csv(file3, usecols=[1,2], header=None, skiprows=[0])
+  df = df.append(df3, sort=False)
+
+  file4 = os.path.join(files_folder, 'path3.csv')
+  df4 = pd.read_csv(file4, usecols=[1,2], header=None, skiprows=[0])
+  df = df.append(df4, sort=False)
+  
+  file5 = os.path.join(files_folder, 'path4.csv')
+  df5 = pd.read_csv(file5, usecols=[1,2], header=None, skiprows=[0])
+  df = df.append(df5, sort=False)
+  
+  output_file_folder = os.path.join(files_folder, 'path.csv')
+  df.to_csv(output_file_folder, index=False, header=['source', 'destination'])
+
+
 if __name__ == "__main__":
   
-  datasets = [8]
+  steps = [9]
   
-  if 1 in datasets:
+  if 1 in steps:
     rename_files_for_dataset1()
     
-  if 2 in datasets:
+  if 2 in steps:
     rename_files_for_dataset2()
     
-  if 3 in datasets:
+  if 3 in steps:
     rename_files_for_dataset2_fix()
 
-  if 4 in datasets:
+  if 4 in steps:
     rename_files_for_dataset3()
 
-  if 5 in datasets:
+  if 5 in steps:
     rename_files_for_dataset4()
 
-  if 6 in datasets:
+  if 6 in steps:
     convert_case_44()
 
-  if 7 in datasets:
+  if 7 in steps:
     dataset_split()
     
-  if 8 in datasets:
+  if 8 in steps:
     data_identity_check()
+    
+  if 9 in steps:
+    merge_all_path_files_into_a_sigle_file()
