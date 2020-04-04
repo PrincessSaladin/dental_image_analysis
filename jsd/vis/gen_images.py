@@ -16,6 +16,16 @@ GenImagesOptions = namedtuple('GenImagesOption',
                               'resolution contrast_min contrast_max')
 
 
+def is_voxel_out_of_bound(coord_voxel, image_size):
+  """
+  Check whether a voxel is out of bound.
+  """
+  for idx in range(3):
+    if coord_voxel[idx] < 0 or coord_voxel[idx] >= image_size[idx]:
+      return True
+  return False
+
+
 def extract_planes_from_volume(src_data, src_dimension, src_resolution,
                                dst_dimension, dst_resolution, dst_point):
   """
@@ -79,7 +89,12 @@ def extract_planes_from_volume(src_data, src_dimension, src_resolution,
 def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
                      output_image_spacing, output_folder):
   
-  for image_name in landmarks.keys():
+  for idx, image_name in enumerate(list(landmarks.keys())):
+    
+    # temp use
+    if idx < 109:
+      continue
+    
     print("Generate plane images for {}.".format(image_name))
     assert len(landmarks[image_name].keys()) > 0
     
@@ -105,13 +120,14 @@ def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
       sagittal_image_filename = "{0}_{1}_lm{2}_sagittal.png".format(image_basename, image_type, landmark_name)
 
       src_landmark_coord_world = landmarks[image_name][landmark_name]
-      if np.linalg.norm(src_landmark_coord_world, ord=1) < 1e-6:
+      src_landmark_coord_voxel = src_image.TransformPhysicalPointToContinuousIndex(src_landmark_coord_world)
+      if np.linalg.norm(src_landmark_coord_world, ord=1) < 1e-6 or \
+          is_voxel_out_of_bound(src_landmark_coord_voxel, src_size):
         save_black_planes('axial', os.path.join(landmark_output_folder, axial_image_filename), 'g')
         save_black_planes('coronal', os.path.join(landmark_output_folder, coronal_image_filename), 'r')
         save_black_planes('sagittal', os.path.join(landmark_output_folder, sagittal_image_filename), 'y')
         continue
       
-      src_landmark_coord_voxel = src_image.TransformPhysicalPointToContinuousIndex(src_landmark_coord_world)
       dst_landmark_coord_voxel = np.zeros(3, dtype=int)
       for i in range(3):
         dst_landmark_coord_voxel[i] = int(np.floor(src_landmark_coord_voxel[i] * src_spacing[i] / dst_spacing[i]))

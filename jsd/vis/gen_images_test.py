@@ -1,13 +1,9 @@
 import argparse
-import numpy as np
+from collections import OrderedDict
+import glob
 import os
 import pandas as pd
-import sys
-from collections import OrderedDict
-from easydict import EasyDict as edict
-import glob
 
-from jsd.vis.gen_images import GenImagesOptions as Options
 from jsd.vis.gen_images import gen_plane_images
 from jsd.vis.gen_html_report import gen_html_report
 
@@ -17,7 +13,7 @@ def parse_and_check_arguments():
   Parse input arguments and raise error if invalid.
   """
   default_image_folder = '/home/qinliu/projects/CT_Dental/data'
-  default_label_folder = '/home/qinliu/projects/CT_Dental/landmark_debug'
+  default_label_folder = '/home/qinliu/projects/CT_Dental/landmark'
   default_detection_folder = ''
   default_resolution = [1.5, 1.5, 1.5]
   default_contrast_range = None
