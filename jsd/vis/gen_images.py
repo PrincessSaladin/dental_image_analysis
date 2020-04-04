@@ -92,7 +92,7 @@ def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
   for idx, image_name in enumerate(list(landmarks.keys())):
     
     # temp use
-    if idx < 109:
+    if idx < 115:
       continue
     
     print("Generate plane images for {}.".format(image_name))
@@ -120,7 +120,8 @@ def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
       sagittal_image_filename = "{0}_{1}_lm{2}_sagittal.png".format(image_basename, image_type, landmark_name)
 
       src_landmark_coord_world = landmarks[image_name][landmark_name]
-      src_landmark_coord_voxel = src_image.TransformPhysicalPointToContinuousIndex(src_landmark_coord_world)
+      src_landmark_coord_world_double = [float(src_landmark_coord_world[idx]) for idx in range(3)]
+      src_landmark_coord_voxel = src_image.TransformPhysicalPointToContinuousIndex(src_landmark_coord_world_double)
       if np.linalg.norm(src_landmark_coord_world, ord=1) < 1e-6 or \
           is_voxel_out_of_bound(src_landmark_coord_voxel, src_size):
         save_black_planes('axial', os.path.join(landmark_output_folder, axial_image_filename), 'g')

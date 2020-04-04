@@ -18,6 +18,7 @@ def parse_and_check_arguments():
   default_resolution = [1.5, 1.5, 1.5]
   default_contrast_range = None
   default_output_folder = '/tmp/data/CT_Dental/landmark_html'
+  default_generate_pictures = True
 
   parser = argparse.ArgumentParser(
     description='Snapshot three planes centered around landmarks.')
@@ -39,6 +40,10 @@ def parse_and_check_arguments():
   parser.add_argument('--output_folder', type=str,
                       default=default_output_folder,
                       help='Folder containing the generated snapshot images.')
+  parser.add_argument('--generate_pictures', type=bool,
+                      default=default_generate_pictures,
+                      help='Folder containing the generated snapshot images.')
+
 
   return parser.parse_args()
 
@@ -94,8 +99,10 @@ if __name__ == '__main__':
 
   if not os.path.isdir(args.output_folder):
     os.makedirs(args.output_folder)
-  gen_plane_images(args.image_folder, label_landmarks, 'label',
-                   args.contrast_range, args.resolution, args.output_folder)
+  
+  if args.generate_pictures:
+    gen_plane_images(args.image_folder, label_landmarks, 'label',
+                     args.contrast_range, args.resolution, args.output_folder)
 
   if usage_flag == 2:
     detection_landmarks = OrderedDict()
@@ -104,9 +111,10 @@ if __name__ == '__main__':
         os.path.basename(detection_landmark_csv).split('.')[0], 'org.mha')
       landmarks = load_coordinates_from_csv(detection_landmark_csv)
       detection_landmarks.update({file_name: landmarks})
-  
-    gen_plane_images(args.image_folder, detection_landmarks, 'detection',
-                     args.contrast_range, args.resolution, args.output_folder)
+
+    if args.generate_pictues:
+      gen_plane_images(args.image_folder, detection_landmarks, 'detection',
+                       args.contrast_range, args.resolution, args.output_folder)
 
   # Generate landmark html report for each landmark.
   landmark_list = [label_landmarks]
