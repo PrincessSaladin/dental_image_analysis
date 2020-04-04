@@ -18,7 +18,7 @@ def parse_and_check_arguments():
   """
   default_image_folder = '/home/qinliu/projects/CT_Dental/data'
   default_label_folder = '/home/qinliu/projects/CT_Dental/landmark_debug'
-  default_detection_folder = '/home/qinliu/projects/CT_Dental/landmark_debug'
+  default_detection_folder = ''
   default_resolution = [1.5, 1.5, 1.5]
   default_contrast_range = None
   default_output_folder = '/tmp/data/CT_Dental/landmark_html'

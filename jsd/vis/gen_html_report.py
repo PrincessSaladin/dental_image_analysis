@@ -312,58 +312,6 @@ def GenHtmlRowForErrorAnalysis(image_link_template, error_info_template, documen
   return document_text
 
 
-"""
-Generate a line of html text contents for truly positive files, in the usage of benchmark.
-"""
-def GenHtmlRowForBenchmark(image_link_template, error_info_template, document_text, truly_positive_files,
-                           idx, point_dicts, image_folder, error_summarys, benchmark, width):
-  index = benchmark.sorted_index_list[idx]
-  file_name = truly_positive_files[index]
-
-  labelled_point = point_dicts[0][file_name]
-  detected_point = point_dicts[1][file_name]
-  experiment_point = point_dicts[2][file_name]
-
-  labelled_images = [file_name + '_labelled_axial.png',
-                     file_name + '_labelled_coronal.png',
-                     file_name + '_labelled_sagittal.png']
-  baseline_images = [file_name + '_baseline_axial.png',
-                     file_name + '_baseline_coronal.png',
-                     file_name + '_baseline_sagittal.png']
-  experiment_images = [file_name + '_experiment_axial.png',
-                     file_name + '_experiment_coronal.png',
-                     file_name + '_experiment_sagittal.png']
-
-  x_error1 = error_summarys[0].point_distance_list[index][0]
-  y_error1 = error_summarys[0].point_distance_list[index][1]
-  z_error1 = error_summarys[0].point_distance_list[index][2]
-  l2_error1 = error_summarys[0].l2_norm_error_list[index]
-  x_error2 = error_summarys[1].point_distance_list[index][0]
-  y_error2 = error_summarys[1].point_distance_list[index][1]
-  z_error2 = error_summarys[1].point_distance_list[index][2]
-  l2_error2 = error_summarys[1].l2_norm_error_list[index]
-
-  l2_diff = benchmark.l2_norm_diff_list[index]
-
-  error_info = error_info_template.format(labelled_point[0], labelled_point[1], labelled_point[2],
-                                          detected_point[0], detected_point[1], detected_point[2],
-                                          experiment_point[0], experiment_point[1], experiment_point[2],
-                                          x_error1, y_error1, z_error1, l2_error1,
-                                          x_error2, y_error2, z_error2, l2_error2,
-                                          l2_diff)
-  case_info = r'<b>Case nunmber</b>:{0} : {1} ,   '.format(index, file_name)
-  document_text = AddDocumentText(document_text, case_info)
-  document_text = AddDocumentText(document_text, error_info)
-  document_text += "\n"
-  document_text = AddDocumentText(document_text, "<table border=1><tr>")
-  document_text = AddThreeImages(document_text, image_link_template, image_folder, labelled_images, width)
-  document_text = AddThreeImages(document_text, image_link_template, image_folder, baseline_images, width)
-  document_text = AddThreeImages(document_text, image_link_template, image_folder, experiment_images, width)
-  document_text += "\n"
-  document_text = AddDocumentText(document_text, r'</tr></table>')
-  return document_text
-
-
 def gen_html_report(landmarks_list, usage_flag, output_folder):
   """
   Generate landmark evaluation HTML report.
@@ -396,15 +344,18 @@ def gen_html_report(landmarks_list, usage_flag, output_folder):
     document_text += "\n"
 
     for image_idx, image_name in enumerate(image_list):
-      landmark_world = labelled_landmarks[image_name][landmark_name]
+      label_landmark_world = labelled_landmarks[image_name][landmark_name]
       if usage_flag == 1:
-        document_text = gen_html_row_for_label_checking(image_link_template, error_info_template, document_text, image_list,
-                                    image_idx, landmark_name, landmark_world, picture_folder='./pictures', width=200)
+        document_text = gen_row_for_html(usage_flag, image_link_template, error_info_template, document_text, image_list,
+                                    image_idx, landmark_name, [label_landmark_world], picture_folder='./pictures', width=200)
         analysis_text = gen_analysis_text(len(image_list))
       
       elif usage_flag == 2:
-        document_text = gen_html_row_for_label_checking(image_link_template, error_info_template, document_text, image_list,
-                                    image_idx, landmark_name, landmark_world, picture_folder='./pictures', width=200)
+        detected_landmark_world = detected_landmarks[image_name][landmark_name]
+        error_info_template += r'<b>Detected</b>: [{3:.2f}, {4:.2f}, {5:.2f}];  '
+        error_info_template += r'<b>Error</b>: x:{6:.2f}; y:{7:.2f}; z:{8:.2f}; L2:{9:.2f}'
+        document_text = gen_row_for_html(usage_flag, image_link_template, error_info_template, document_text, image_list,
+                                    image_idx, landmark_name, [label_landmark_world, detected_landmark_world], picture_folder='./pictures', width=200)
         analysis_text = gen_analysis_text(len(image_list))
 
       else:
@@ -416,32 +367,67 @@ def gen_html_report(landmarks_list, usage_flag, output_folder):
 
 
 def gen_analysis_text(num_data):
+  """
+  Generate error analysis text for the html report.
+  """
   analysis_text = "There are {0} cases in total,".format(num_data)
   analysis_text += "\n"
 
   return analysis_text
 
 
-def gen_html_row_for_label_checking(image_link_template, error_info_template, document_text, image_list,
-                                    image_idx, landmark_name, landmark_world, picture_folder, width):
+def gen_row_for_html(usage_flag, image_link_template, error_info_template, document_text, image_list,
+                 image_idx, landmark_name, landmark_worlds, picture_folder, width):
   """
   Generate a line of html text contents for labelled cases, in the usage of label checking.
   """
   image_name = image_list[image_idx]
   image_basename = image_name.split('/')[0]
+  case_info = r'<b>Case nunmber</b>:{0} : {1} ,   '.format(image_idx, image_name)
+
   labelled_images = [image_basename + '_label_lm{}_axial.png'.format(landmark_name),
                      image_basename + '_label_lm{}_coronal.png'.format(landmark_name),
                      image_basename + '_label_lm{}_sagittal.png'.format(landmark_name)]
+  labelled_point = landmark_worlds[0]
+  
+  if usage_flag == 1:
+    error_info = error_info_template.format(landmark_worlds[0][0],
+                                            landmark_worlds[0][1],
+                                            landmark_worlds[0][2])
+  
+  elif usage_flag == 2:
+    detected_images = [image_basename + '_detection_lm{}_axial.png'.format(landmark_name),
+                       image_basename + '_detection_lm{}_coronal.png'.format(landmark_name),
+                       image_basename + '_detection_lm{}_sagittal.png'.format(landmark_name)]
+    detected_point = landmark_worlds[1]
 
-  case_info = r'<b>Case nunmber</b>:{0} : {1} ,   '.format(image_idx, image_name)
-  error_info = error_info_template.format(landmark_world[0],
-                                          landmark_world[1],
-                                          landmark_world[2])
+    x_error = detected_point[0] - labelled_point[0]
+    y_error = detected_point[1] - labelled_point[1]
+    z_error = detected_point[2] - labelled_point[2]
+    l2_error = np.linalg.norm(
+      np.array(labelled_point) - np.array(detected_point))
+  
+    error_info = error_info_template.format(labelled_point[0],
+                                            labelled_point[1],
+                                            labelled_point[2],
+                                            detected_point[0],
+                                            detected_point[1],
+                                            detected_point[2],
+                                            x_error,
+                                            y_error,
+                                            z_error,
+                                            l2_error)
+  else:
+    raise ValueError('Unsupported flag type!')
+
   document_text = AddDocumentText(document_text, case_info)
   document_text = AddDocumentText(document_text, error_info)
+  
   document_text += "\n"
   document_text = AddDocumentText(document_text, "<table border=1><tr>")
   document_text = AddThreeImages(document_text, image_link_template, picture_folder, labelled_images, width)
+  if usage_flag == 2:
+    document_text = AddThreeImages(document_text, image_link_template, picture_folder, detected_images, width)
   document_text += "\n"
   document_text = AddDocumentText(document_text, r'</tr></table>')
 
