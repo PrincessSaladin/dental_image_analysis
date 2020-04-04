@@ -204,10 +204,10 @@ def GenAnalysisText(num_data, truly_positive_files, additional_info, usage_flag,
 
 
 def AddThreeImages(document_text, image_link_template, image_folder, images, width):
-  for j in range(3):
+  for idx in range(3):
     document_text += "\n"
     image_info = r'<td>{0}</td>'.format(image_link_template.format(
-      os.path.join(image_folder, images[j]), width))
+      os.path.join(image_folder, images[idx]), width))
     document_text = AddDocumentText(document_text, image_info)
   return document_text
 
@@ -361,4 +361,88 @@ def GenHtmlRowForBenchmark(image_link_template, error_info_template, document_te
   document_text = AddThreeImages(document_text, image_link_template, image_folder, experiment_images, width)
   document_text += "\n"
   document_text = AddDocumentText(document_text, r'</tr></table>')
+  return document_text
+
+
+def gen_html_report(landmarks_list, usage_flag, output_folder):
+  """
+  Generate landmark evaluation HTML report.
+  Input arguments:
+    file_name_list:   The list of 3D volume file names including postfix.
+    point_dicts:      A list of dicts containing the labelled(detected,experiment) points' coordinates.
+    additional_info:  A dict containing the information of no_landmark, false positives
+                      and miss detections.
+    usage_flag:       A integer indicating the usage of the html tool.
+                      1 for ground truth only
+                      2 for error analysis
+                      3 for benchmark comparison
+    output_folder:    The output folder containing the html report.
+    image_folder:     The image folder containing the captured 2D plane images.
+                      Must be a relative path to the output_folder.
+    html_report_name: The HTML report file name.
+  """
+  labelled_landmarks = landmarks_list[0]
+
+  if usage_flag == 2:
+    detected_landmarks = landmarks_list[1]
+    assert len(labelled_landmarks.keys()) == len(detected_landmarks.keys())
+
+  image_list = list(labelled_landmarks.keys())
+  for landmark_name in labelled_landmarks[image_list[0]].keys():
+    print("Generating html report for landmark {}.".format(landmark_name))
+    image_link_template = r"<div class='content'><img border=0  src= '{0}'  hspace=1  width={1} class='pic'></div>"
+    error_info_template = r'<b>Labelled</b>: [{0:.2f}, {1:.2f}, {2:.2f}];'
+    document_text = r'"<h1>check predicted coordinates:</h1>"'
+    document_text += "\n"
+
+    for image_idx, image_name in enumerate(image_list):
+      landmark_world = labelled_landmarks[image_name][landmark_name]
+      if usage_flag == 1:
+        document_text = gen_html_row_for_label_checking(image_link_template, error_info_template, document_text, image_list,
+                                    image_idx, landmark_name, landmark_world, picture_folder='./pictures', width=200)
+        analysis_text = gen_analysis_text(len(image_list))
+      
+      elif usage_flag == 2:
+        document_text = gen_html_row_for_label_checking(image_link_template, error_info_template, document_text, image_list,
+                                    image_idx, landmark_name, landmark_world, picture_folder='./pictures', width=200)
+        analysis_text = gen_analysis_text(len(image_list))
+
+      else:
+        raise ValueError('Undefined usage flag!')
+  
+    html_report_name = 'result_analysis.html'.format(landmark_name)
+    html_report_path = os.path.join(output_folder, 'lm{}'.format(landmark_name), html_report_name)
+    WriteToHtmlReportFile(document_text, analysis_text, html_report_path, width=200)
+
+
+def gen_analysis_text(num_data):
+  analysis_text = "There are {0} cases in total,".format(num_data)
+  analysis_text += "\n"
+
+  return analysis_text
+
+
+def gen_html_row_for_label_checking(image_link_template, error_info_template, document_text, image_list,
+                                    image_idx, landmark_name, landmark_world, picture_folder, width):
+  """
+  Generate a line of html text contents for labelled cases, in the usage of label checking.
+  """
+  image_name = image_list[image_idx]
+  image_basename = image_name.split('/')[0]
+  labelled_images = [image_basename + '_label_lm{}_axial.png'.format(landmark_name),
+                     image_basename + '_label_lm{}_coronal.png'.format(landmark_name),
+                     image_basename + '_label_lm{}_sagittal.png'.format(landmark_name)]
+
+  case_info = r'<b>Case nunmber</b>:{0} : {1} ,   '.format(image_idx, image_name)
+  error_info = error_info_template.format(landmark_world[0],
+                                          landmark_world[1],
+                                          landmark_world[2])
+  document_text = AddDocumentText(document_text, case_info)
+  document_text = AddDocumentText(document_text, error_info)
+  document_text += "\n"
+  document_text = AddDocumentText(document_text, "<table border=1><tr>")
+  document_text = AddThreeImages(document_text, image_link_template, picture_folder, labelled_images, width)
+  document_text += "\n"
+  document_text = AddDocumentText(document_text, r'</tr></table>')
+
   return document_text

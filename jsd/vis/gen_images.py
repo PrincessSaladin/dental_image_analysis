@@ -6,7 +6,7 @@ import os
 
 from collections import namedtuple
 from scipy import interpolate as itp
-from jsd.vis.save_images import PlotCrossingAndSavePlanes, SaveBlackPlanes
+from jsd.vis.save_images import PlotCrossingAndSavePlanes, save_black_planes
 
 
 """
@@ -76,7 +76,7 @@ def extract_planes_from_volume(src_data, src_dimension, src_resolution,
   return dst_axial, dst_coronal, dst_sagittal
 
 
-def gen_plane_images(image_folder, landmarks, usage_flag, output_contrast_range,
+def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
                      output_image_spacing, output_folder):
   
   for image_name in landmarks.keys():
@@ -95,7 +95,22 @@ def gen_plane_images(image_folder, landmarks, usage_flag, output_contrast_range,
       dst_size[i] = int(np.round(src_size[i] * src_spacing[i] / dst_spacing[i]))
 
     for landmark_name in landmarks[image_name].keys():
+      landmark_output_folder = os.path.join(output_folder, 'lm{}'.format(landmark_name), 'pictures')
+      if not os.path.isdir(landmark_output_folder):
+        os.makedirs(landmark_output_folder)
+        
+      image_basename = image_name.split('/')[0]
+      axial_image_filename = "{0}_{1}_lm{2}_axial.png".format(image_basename, image_type, landmark_name)
+      coronal_image_filename = "{0}_{1}_lm{2}_coronal.png".format(image_basename, image_type, landmark_name)
+      sagittal_image_filename = "{0}_{1}_lm{2}_sagittal.png".format(image_basename, image_type, landmark_name)
+
       src_landmark_coord_world = landmarks[image_name][landmark_name]
+      if np.linalg.norm(src_landmark_coord_world, ord=1) < 1e-6:
+        save_black_planes('axial', os.path.join(landmark_output_folder, axial_image_filename), 'g')
+        save_black_planes('coronal', os.path.join(landmark_output_folder, coronal_image_filename), 'r')
+        save_black_planes('sagittal', os.path.join(landmark_output_folder, sagittal_image_filename), 'y')
+        continue
+      
       src_landmark_coord_voxel = src_image.TransformPhysicalPointToContinuousIndex(src_landmark_coord_world)
       dst_landmark_coord_voxel = np.zeros(3, dtype=int)
       for i in range(3):
@@ -103,11 +118,6 @@ def gen_plane_images(image_folder, landmarks, usage_flag, output_contrast_range,
 
       axial_plane, coronal_plane, sagittal_plane = extract_planes_from_volume(
         src_image_npy, src_size, src_spacing, dst_size, dst_spacing, dst_landmark_coord_voxel)
-
-      image_basename = image_name.split('/')[0]
-      axial_image_filename = "{0}_lm{1}_{2}_axial.png".format(image_basename, landmark_name, usage_flag)
-      coronal_image_filename = "{0}_lm{1}_{2}_coronal.png".format(image_basename, landmark_name, usage_flag)
-      sagittal_image_filename = "{0}_lm{1}_{2}_sagittal.png".format(image_basename, landmark_name, usage_flag)
 
       if output_contrast_range is not None:
         contrast_min, contrast_max = output_contrast_range[0], output_contrast_range[1]
@@ -126,12 +136,12 @@ def gen_plane_images(image_folder, landmarks, usage_flag, output_contrast_range,
 
       PlotCrossingAndSavePlanes(
         axial_plane, [dst_landmark_coord_voxel[0], dst_landmark_coord_voxel[1]],
-        'axial', os.path.join(output_folder, axial_image_filename), 'g', 'g-.')
+        'axial', os.path.join(landmark_output_folder, axial_image_filename), 'g', 'g-.')
 
       PlotCrossingAndSavePlanes(
         coronal_plane, [dst_landmark_coord_voxel[0], dst_landmark_coord_voxel[2]],
-        'coronal', os.path.join(output_folder, coronal_image_filename), 'r', 'r-.')
+        'coronal', os.path.join(landmark_output_folder, coronal_image_filename), 'r', 'r-.')
 
       PlotCrossingAndSavePlanes(
         sagittal_plane, [dst_landmark_coord_voxel[1], dst_landmark_coord_voxel[2]],
-        '_sagittal', os.path.join(output_folder, sagittal_image_filename), 'y', 'y-.')
+        'sagittal', os.path.join(landmark_output_folder, sagittal_image_filename), 'y', 'y-.')

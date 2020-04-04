@@ -95,16 +95,16 @@ def PlotCrossingAndSavePlanes(plane, point, title, image_path, title_color='g',
   fig.clf()
 
 
-"""
-Save black planes for files that do not contain the corresponding landmark.
-Input arguments:
-  title:       A string, title of the image.
-  image_path:  A string ,path for the image to save.
-  title_color: A string, color of the image's title.
-  crop_x:      A number default to 100, the returned cropping width of the image.
-  crop_y:      A number default to 100, the returned cropping height of the image.
-"""
-def SaveBlackPlanes(title, image_path, title_color='g', crop_x=100, crop_y=100):
+def save_black_planes(title, image_path, title_color='g', crop_x=100, crop_y=100):
+  """
+  Save black planes for files that do not contain the corresponding landmark.
+  Input arguments:
+    title:       A string, title of the image.
+    image_path:  A string ,path for the image to save.
+    title_color: A string, color of the image's title.
+    crop_x:      A number default to 100, the returned cropping width of the image.
+    crop_y:      A number default to 100, the returned cropping height of the image.
+  """
   fig = plt.figure(1, figsize=(5,5))
   plane = np.zeros([crop_x, crop_y])
   plt.imshow(plane, cmap='gray')
