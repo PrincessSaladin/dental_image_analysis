@@ -58,17 +58,9 @@ def rename_landmark_files():
       os.remove(output_landmark_file_temp)
 
 
-# visualize all landmarks
-def vis_landmarks():
-  pass
-
-
 if __name__ == '__main__':
   
-  steps = [1, 2, 3, 4]
+  steps = [1]
   
   if 1 in steps:
     rename_landmark_files()
-    
-  if 2 in steps:
-    vis_landmarks()

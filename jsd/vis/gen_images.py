@@ -1,10 +1,12 @@
 #coding:utf-8
-import SimpleITK as sitk
+from collections import namedtuple
+from collections import OrderedDict
 import numpy as np
 import os
-
-from collections import namedtuple
+import pandas as pd
 from scipy import interpolate as itp
+import SimpleITK as sitk
+
 from jsd.vis.save_images import PlotCrossingAndSavePlanes, save_black_planes
 
 
@@ -37,7 +39,26 @@ def is_world_coordinate_valid(coord_world):
     return False
   
   return True
+
+
+def load_coordinates_from_csv(csv_file):
+  """
+  Load coordinates (x,y,z) from CSV file and pack them into an OrderedDict.
+  Input arguments:
+    csv_file: CSV file path containing [x,y,z] coordinates in each row.
+  Return:
+    Two dimensional array, {idx_0:[x_0, y_0, z_0], ... ,idx_n:[x_n, y_n, z_n]},
+    where idx_n is the landmark name.
+  """
+  assert csv_file.endswith('.csv')
   
+  landmarks = OrderedDict()
+  df = pd.read_csv(csv_file)
+  for idx in range(len(df)):
+    landmark = df.loc[idx]
+    landmarks.update({idx: [landmark[0], landmark[1], landmark[2]]})
+  
+  return landmarks
 
 
 def extract_planes_from_volume(src_data, src_dimension, src_resolution,
