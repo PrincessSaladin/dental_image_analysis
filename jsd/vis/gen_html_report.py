@@ -4,7 +4,7 @@ import os
 import webbrowser
 from jsd.vis.error_analysis import ErrorAnalysis
 from jsd.vis.error_analysis import BaselineBenchmark
-
+from jsd.vis.gen_images import get_landmarks_stat
 
 def AddDocumentText(original_text, new_text_to_add):
   return original_text + r'+"{0}"'.format(new_text_to_add)
@@ -43,13 +43,13 @@ def WriteToHtmlReportFile(document_text, analysis_text, html_report_path, width)
       </style>
     </head>
     <body>
-      <script type="text/javascript">       
-        document.write(%s)               
-      </script>
       <h1> Summary:</h1>
       %s
+      <script type="text/javascript">
+        document.write(%s)               
+      </script>
     </body>
-    </html>""" % (width, width, document_text, analysis_text)
+    </html>""" % (width, width, analysis_text, document_text)
 
   f.write(message)
   f.close()
@@ -140,10 +140,6 @@ def GenHtmlReport(file_name_list, point_dicts, additional_info, usage_flag,
       document_text = GenHtmlRowForErrorAnalysis(image_link_template, error_info_template, document_text, truly_positive_files,
                                                  idx, point_dicts, image_folder, error_summary, width)
       analysis_text = GenAnalysisText(num_data, truly_positive_files, additional_info, usage_flag, error_summary)
-    else:
-      document_text = GenHtmlRowForBenchmark(image_link_template, error_info_template, document_text, truly_positive_files,
-                                             idx, point_dicts, image_folder, error_summarys, benchmark, width)
-      analysis_text = GenAnalysisText(num_data, truly_positive_files, additional_info, usage_flag, error_summarys, benchmark)
 
   abnormal_files = list(set(file_name_list) - set(truly_positive_files))
   abnormal_files.sort()
@@ -330,9 +326,11 @@ def gen_html_report(landmarks_list, usage_flag, output_folder):
     html_report_name: The HTML report file name.
   """
   labelled_landmarks = landmarks_list[0]
+  labelled_landmarks_stat = get_landmarks_stat(labelled_landmarks)
 
   if usage_flag == 2:
     detected_landmarks = landmarks_list[1]
+    detected_landmarks_stat = get_landmarks_stat(detected_landmarks)
     assert len(labelled_landmarks.keys()) == len(detected_landmarks.keys())
 
   image_list = list(labelled_landmarks.keys())
@@ -348,30 +346,57 @@ def gen_html_report(landmarks_list, usage_flag, output_folder):
       if usage_flag == 1:
         document_text = gen_row_for_html(usage_flag, image_link_template, error_info_template, document_text, image_list,
                                     image_idx, landmark_name, [label_landmark_world], picture_folder='./pictures', width=200)
-        analysis_text = gen_analysis_text(len(image_list))
-      
       elif usage_flag == 2:
         detected_landmark_world = detected_landmarks[image_name][landmark_name]
         error_info_template += r'<b>Detected</b>: [{3:.2f}, {4:.2f}, {5:.2f}];  '
         error_info_template += r'<b>Error</b>: x:{6:.2f}; y:{7:.2f}; z:{8:.2f}; L2:{9:.2f}'
         document_text = gen_row_for_html(usage_flag, image_link_template, error_info_template, document_text, image_list,
                                     image_idx, landmark_name, [label_landmark_world, detected_landmark_world], picture_folder='./pictures', width=200)
-        analysis_text = gen_analysis_text(len(image_list))
 
       else:
         raise ValueError('Undefined usage flag!')
-  
+
+    if usage_flag == 1:
+      analysis_text = gen_analysis_text(len(image_list), usage_flag, [labelled_landmarks_stat[landmark_name]])
+
+    elif usage_flag == 2:
+      analysis_text = gen_analysis_text(len(image_list), usage_flag,
+        [labelled_landmarks_stat[landmark_name], detected_landmarks_stat[landmark_name]])
+
+    else:
+      raise ValueError('Undefined usage float!')
+
     html_report_name = 'result_analysis.html'.format(landmark_name)
-    html_report_path = os.path.join(output_folder, 'lm{}'.format(landmark_name), html_report_name)
+    html_report_folder = os.path.join(output_folder, 'lm{}'.format(landmark_name))
+    if not os.path.isdir(html_report_folder):
+      os.makedirs(html_report_folder)
+    
+    html_report_path = os.path.join(html_report_folder, html_report_name)
     WriteToHtmlReportFile(document_text, analysis_text, html_report_path, width=200)
 
 
-def gen_analysis_text(num_data):
+def gen_analysis_text(num_data, usage_flag, landmarks):
   """
   Generate error analysis text for the html report.
   """
-  analysis_text = "There are {0} cases in total,".format(num_data)
+  analysis_text = "There are {0} cases in total, ".format(num_data)
   analysis_text += "\n"
+
+  labelled_landmarks = landmarks[0]
+  analysis_text += r'<p style="color:blue;">{0} cases do not contain this landmark: {1}</p>'.format(
+    len(labelled_landmarks['neg']), labelled_landmarks['neg'])
+  analysis_text += "<p> </p>"
+
+  if usage_flag == 2:
+    detected_landmarks = landmarks[1]
+    TP_cases = set(detected_landmarks['pos']) & set(labelled_landmarks['pos'])
+    TN_cases = set(detected_landmarks['neg']) & set(labelled_landmarks['neg'])
+    FP_cases = set(detected_landmarks['pos']) & set(labelled_landmarks['neg'])
+    FN_cases = set(detected_landmarks['neg']) & set(labelled_landmarks['pos'])
+    analysis_text += r'<p style="color:blue;">TP (TPR): {0} ({1})</p>'.format(len(TP_cases), len(TP_cases) / num_data)
+    analysis_text += r'<p style="color:blue;">TN (TNR): {0} ({1})</p>'.format(len(TN_cases), len(TN_cases) / num_data)
+    analysis_text += r'<p style="color:blue;">FP (FPR): {0} ({1})</p>'.format(len(FP_cases), len(FP_cases) / num_data)
+    analysis_text += r'<p style="color:blue;">FN (FNR): {0} ({1})</p>'.format(len(FN_cases), len(FN_cases) / num_data)
 
   return analysis_text
 

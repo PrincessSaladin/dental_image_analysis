@@ -17,7 +17,7 @@ GenImagesOptions = namedtuple('GenImagesOption',
                               'resolution contrast_min contrast_max')
 
 
-def is_voxel_out_of_bound(coord_voxel, image_size):
+def is_voxel_coordinate_valid(coord_voxel, image_size):
   """
   Check whether the voxel coordinate is out of bound.
   """
@@ -39,6 +39,27 @@ def is_world_coordinate_valid(coord_world):
     return False
   
   return True
+
+
+def get_landmarks_stat(landmarks):
+  """
+  Get the statistics of landmarks.
+  """
+  landmarks_stat = OrderedDict()
+  for landmark_name in landmarks[list(landmarks.keys())[0]].keys():
+    landmarks_stat.update({landmark_name: {'pos': [], 'neg': []}})
+
+  for image_name in landmarks.keys():
+    landmark_names = landmarks[image_name].keys()
+    image_baseame = image_name.split('/')[0]
+    for landmark_name in landmark_names:
+      landmark = landmarks[image_name][landmark_name]
+      if is_world_coordinate_valid(landmark):
+        landmarks_stat[landmark_name]['pos'].append(image_baseame)
+      else:
+        landmarks_stat[landmark_name]['neg'].append(image_baseame)
+
+  return landmarks_stat
 
 
 def load_coordinates_from_csv(csv_file):
@@ -154,12 +175,12 @@ def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
       src_landmark_coord_world_double = [float(src_landmark_coord_world[idx]) for idx in range(3)]
       src_landmark_coord_voxel = src_image.TransformPhysicalPointToContinuousIndex(src_landmark_coord_world_double)
       if not is_world_coordinate_valid(src_landmark_coord_world) or \
-          is_voxel_out_of_bound(src_landmark_coord_voxel, src_size):
+          is_voxel_coordinate_valid(src_landmark_coord_voxel, src_size):
         save_black_planes('axial', os.path.join(landmark_output_folder, axial_image_filename), 'g')
         save_black_planes('coronal', os.path.join(landmark_output_folder, coronal_image_filename), 'r')
         save_black_planes('sagittal', os.path.join(landmark_output_folder, sagittal_image_filename), 'y')
         continue
-      
+        
       dst_landmark_coord_voxel = np.zeros(3, dtype=int)
       for i in range(3):
         dst_landmark_coord_voxel[i] = int(np.floor(src_landmark_coord_voxel[i] * src_spacing[i] / dst_spacing[i]))

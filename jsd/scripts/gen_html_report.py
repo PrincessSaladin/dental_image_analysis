@@ -16,8 +16,8 @@ def parse_and_check_arguments():
   default_detection_folder = ''
   default_resolution = [1.5, 1.5, 1.5]
   default_contrast_range = None
-  default_output_folder = '/tmp/data/CT_Dental/landmark_html_debug'
-  default_generate_pictures = True
+  default_output_folder = '/tmp/data/CT_Dental/landmark_html'
+  default_generate_pictures = False
   
   parser = argparse.ArgumentParser(
     description='Snapshot three planes centered around landmarks.')
