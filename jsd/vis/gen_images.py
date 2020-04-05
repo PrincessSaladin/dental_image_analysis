@@ -1,5 +1,4 @@
 #coding:utf-8
-import matplotlib.pyplot as plt
 import SimpleITK as sitk
 import numpy as np
 import os
@@ -18,12 +17,27 @@ GenImagesOptions = namedtuple('GenImagesOption',
 
 def is_voxel_out_of_bound(coord_voxel, image_size):
   """
-  Check whether a voxel is out of bound.
+  Check whether the voxel coordinate is out of bound.
   """
   for idx in range(3):
     if coord_voxel[idx] < 0 or coord_voxel[idx] >= image_size[idx]:
       return True
   return False
+
+
+def is_world_coordinate_valid(coord_world):
+  """
+  Check whether the world coordinate is valid.
+  If world coordinate is (0, 0, 0) or (1, 1, 1), it is invalid.
+  """
+  coord_world_npy = np.array(coord_world)
+  
+  if np.linalg.norm(coord_world_npy, ord=1) < 1e-6 or \
+      np.linalg.norm(coord_world_npy - np.ones(3)) < 1e-6:
+    return False
+  
+  return True
+  
 
 
 def extract_planes_from_volume(src_data, src_dimension, src_resolution,
@@ -91,10 +105,6 @@ def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
   
   for idx, image_name in enumerate(list(landmarks.keys())):
     
-    # temp use
-    if idx < 115:
-      continue
-    
     print("Generate plane images for {}.".format(image_name))
     assert len(landmarks[image_name].keys()) > 0
     
@@ -122,7 +132,7 @@ def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
       src_landmark_coord_world = landmarks[image_name][landmark_name]
       src_landmark_coord_world_double = [float(src_landmark_coord_world[idx]) for idx in range(3)]
       src_landmark_coord_voxel = src_image.TransformPhysicalPointToContinuousIndex(src_landmark_coord_world_double)
-      if np.linalg.norm(src_landmark_coord_world, ord=1) < 1e-6 or \
+      if not is_world_coordinate_valid(src_landmark_coord_world) or \
           is_voxel_out_of_bound(src_landmark_coord_voxel, src_size):
         save_black_planes('axial', os.path.join(landmark_output_folder, axial_image_filename), 'g')
         save_black_planes('coronal', os.path.join(landmark_output_folder, coronal_image_filename), 'r')
