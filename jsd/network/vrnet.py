@@ -24,11 +24,11 @@ class landmark_output_block(nn.Module):
         super(landmark_output_block, self).__init__()
 
         self.pool = nn.AvgPool3d(in_shape)
-        self.conv1 = nn.Conv3d(in_channels, in_channels, kernel_size=3,
+        self.conv1 = nn.Conv3d(in_channels, in_channels * 2, kernel_size=3,
                               padding=1)
-        self.gn1 = nn.GroupNorm(1, num_channels=in_channels)
+        self.gn1 = nn.GroupNorm(1, num_channels=in_channels * 2)
         self.act1 = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv3d(in_channels, out_channels, kernel_size=3,
+        self.conv2 = nn.Conv3d(in_channels * 2, out_channels, kernel_size=3,
                               padding=1)
         self.gn2 = nn.GroupNorm(1, num_channels=out_channels)
 
