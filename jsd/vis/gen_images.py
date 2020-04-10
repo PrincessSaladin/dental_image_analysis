@@ -8,6 +8,8 @@ from scipy import interpolate as itp
 import SimpleITK as sitk
 
 from jsd.vis.save_images import PlotCrossingAndSavePlanes, save_black_planes
+from jsd.utils.landmark_utils import is_world_coordinate_valid, \
+  is_voxel_coordinate_valid
 
 
 """
@@ -15,30 +17,6 @@ The struct containing the 2D plane generation options.
 """
 GenImagesOptions = namedtuple('GenImagesOption',
                               'resolution contrast_min contrast_max')
-
-
-def is_voxel_coordinate_valid(coord_voxel, image_size):
-  """
-  Check whether the voxel coordinate is out of bound.
-  """
-  for idx in range(3):
-    if coord_voxel[idx] < 0 or coord_voxel[idx] >= image_size[idx]:
-      return True
-  return False
-
-
-def is_world_coordinate_valid(coord_world):
-  """
-  Check whether the world coordinate is valid.
-  If world coordinate is (0, 0, 0) or (1, 1, 1), it is invalid.
-  """
-  coord_world_npy = np.array(coord_world)
-  
-  if np.linalg.norm(coord_world_npy, ord=1) < 1e-6 or \
-      np.linalg.norm(coord_world_npy - np.ones(3)) < 1e-6:
-    return False
-  
-  return True
 
 
 def get_landmarks_stat(landmarks):
