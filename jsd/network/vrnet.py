@@ -37,7 +37,8 @@ class landmark_output_block(nn.Module):
         
         out = self.pool(input)
         out = self.act1(self.gn1(self.conv1(out)))
-        out = torch.squeeze(self.gn2(self.conv2(out)))
+        out = self.gn2(self.conv2(out))
+        out = out.view([out.shape[0], out.shape[1]])
         return out
 
 
