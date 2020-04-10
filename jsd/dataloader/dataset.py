@@ -9,6 +9,8 @@ from torch.utils.data import Dataset
 from segmentation3d.utils.file_io import readlines
 from segmentation3d.dataloader.image_tools import crop_image, \
     convert_image_to_tensor, get_image_frame
+from jsd.utils.landmark_utils import is_voxel_coordinate_valid, \
+    is_world_coordinate_valid
 
 
 def read_train_txt(imlist_file):
@@ -44,13 +46,14 @@ def read_landmark_csv(landmark_file, num_landmarks, image):
   image_size = image.GetSize()
   landmarks = []
   for idx in range(len(df)):
-    landmark_world = df.loc[idx]
-    landmark_world_double = [float(landmark_world[idx]) for idx in range(3)]
-    landmark_voxel = image.TransformPhysicalPointToContinuousIndex(landmark_world_double)
-    landmark_voxel_norm = [landmark_voxel[idx] / image_size[idx] for idx in range(3)]
-    for idx in range(3):
-        if landmark_voxel_norm[idx] < 0:
-            landmark_voxel_norm[idx] = -1
+    landmark_world = [float(df.loc[idx][idy]) for idy in range(3)]
+    landmark_voxel = image.TransformPhysicalPointToContinuousIndex(landmark_world)
+    if not is_voxel_coordinate_valid(landmark_voxel, image_size) or \
+       not is_world_coordinate_valid(landmark_world):
+        landmark_voxel_norm = [-1, -1, -1]
+    else:
+        landmark_voxel_norm = \
+            [landmark_voxel[id] / image_size[id] for id in range(3)]
     landmarks.extend(landmark_voxel_norm)
 
   return landmarks
