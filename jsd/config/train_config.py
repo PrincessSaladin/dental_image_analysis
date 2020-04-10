@@ -18,7 +18,7 @@ __C.general.imseg_list = '/home/qinliu/projects/CT_Dental/datasets/train.txt'
 __C.general.landmark_folder = '/home/qinliu/projects/CT_Dental/landmark'
 
 # the output of training models and logs
-__C.general.save_dir = '/home/qinliu/projects/CT_Dental/models/model_0405_2020/'
+__C.general.save_dir = '/home/qinliu/projects/CT_Dental/models/model_0405_2020_debug/'
 
 # continue training from certain epoch, -1 to train from scratch
 __C.general.resume_epoch = -1
@@ -110,10 +110,10 @@ __C.train = {}
 __C.train.epochs = 101
 
 # the number of samples in a batch
-__C.train.batchsize = 2
+__C.train.batchsize = 1
 
 # the number of threads for IO
-__C.train.num_threads = 2
+__C.train.num_threads = 1
 
 # the learning rate
 __C.train.lr = 1e-4

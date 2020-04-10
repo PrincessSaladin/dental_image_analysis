@@ -3,10 +3,10 @@ import glob
 import importlib
 import torch.nn as nn
 import os
+import pandas as pd
 import SimpleITK as sitk
 import time
 import torch
-import numpy as np
 from easydict import EasyDict as edict
 
 from segmentation3d.utils.file_io import load_config, readlines
@@ -14,6 +14,8 @@ from segmentation3d.utils.model_io import get_checkpoint_folder
 from segmentation3d.dataloader.image_tools import convert_image_to_tensor, \
   image_partition_by_fixed_size, resample_spacing, crop_image
 from segmentation3d.utils.normalizer import FixedNormalizer, AdaptiveNormalizer
+from jsd.utils.landmark_utils import is_voxel_coordinate_valid, \
+  is_world_coordinate_valid
 
 
 def read_test_txt(txt_file):
@@ -193,7 +195,10 @@ def segmentation(input_path, model_folder, output_folder, gpu_id):
   
   else:
     raise ValueError('Unsupported input path.')
-  
+
+  if not os.path.isdir(output_folder):
+    os.makedirs(output_folder)
+    
   # test each case
   num_success_case = 0
   total_inference_time = 0
@@ -229,36 +234,49 @@ def segmentation(input_path, model_folder, output_folder, gpu_id):
       raise ValueError('Unsupported partition type!')
     
     begin = time.time()
-    iso_partition_overlap_count = sitk.Image(iso_image.GetSize(),
-                                             sitk.sitkFloat32)
-    iso_partition_overlap_count.CopyInformation(iso_image)
+    voi_landmarks_preds = []
     for idx in range(len(start_voxels)):
       start_voxel, end_voxel = start_voxels[idx], end_voxels[idx]
       
       voi_landmarks_pred = \
         segmentation_voi(model, iso_image, start_voxel, end_voxel, gpu_id > 0)
       
-      print(voi_landmarks_pred)
+      voi_landmarks_preds.append(voi_landmarks_pred)
       print('{:0.2f}%'.format((idx + 1) / len(start_voxels) * 100))
 
     inference_time = time.time() - begin
     
     begin = time.time()
-    case_name = file_name_list[i]
-    if not os.path.isdir(os.path.join(output_folder, case_name)):
-      os.makedirs(os.path.join(output_folder, case_name))
-      
-    # convert to csv file
-    # TO BE DONE
-
-    post_processing_time = time.time() - begin
     
-    begin = time.time()
+    # convert to csv file
+    landmarks_pred = voi_landmarks_preds[0].numpy()
+    batch_size, num_landmark_coords = landmarks_pred.shape
+    num_landmarks = model['num_landmarks']
+    assert batch_size == 1 and num_landmark_coords == num_landmarks * 3
+    
+    landmarks_content = []
+    iso_image_size = iso_image.GetSize()
+    for landmark_idx in range(num_landmarks):
+      landmark_norm_coord = [landmarks_pred[0][3*landmark_idx + 0],
+                             landmarks_pred[0][3*landmark_idx + 1],
+                             landmarks_pred[0][3*landmark_idx + 2]]
+      landmark_voxel_coord = [landmark_norm_coord[idx] * iso_image_size[idx] for idx in range(3)]
+      landmark_world_coord = iso_image.TransformContinuousIndexToPhysicalPoint(landmark_voxel_coord)
+      for coord_idx in range(3):
+        if not is_voxel_coordinate_valid(landmark_voxel_coord, iso_image_size) or \
+            not is_world_coordinate_valid(landmark_world_coord):
+          landmark_world_coord = [-1, -1, -1]
+      
+      landmarks_content.append(landmark_world_coord)
+    
     # save results
+    df = pd.DataFrame(data=landmarks_content, columns=['x', 'y', 'z'])
+    save_name = '{}.csv'.format(file_name_list[i])
+    df.to_csv(os.path.join(output_folder, save_name), index=False)
+    
     save_time = time.time() - begin
     
-    total_test_time = load_model_time + read_image_time + inference_time + \
-                      post_processing_time + save_time
+    total_test_time = load_model_time + read_image_time + inference_time + save_time
     total_inference_time += inference_time
     num_success_case += 1
     
