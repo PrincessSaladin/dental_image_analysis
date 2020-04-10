@@ -7,8 +7,8 @@ def is_voxel_coordinate_valid(coord_voxel, image_size):
   """
   for idx in range(3):
     if coord_voxel[idx] < 0 or coord_voxel[idx] >= image_size[idx]:
-      return True
-  return False
+      return False
+  return True
 
 
 def is_world_coordinate_valid(coord_world):

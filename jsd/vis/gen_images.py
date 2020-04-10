@@ -153,7 +153,7 @@ def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
       src_landmark_coord_world_double = [float(src_landmark_coord_world[idx]) for idx in range(3)]
       src_landmark_coord_voxel = src_image.TransformPhysicalPointToContinuousIndex(src_landmark_coord_world_double)
       if not is_world_coordinate_valid(src_landmark_coord_world) or \
-          is_voxel_coordinate_valid(src_landmark_coord_voxel, src_size):
+          not is_voxel_coordinate_valid(src_landmark_coord_voxel, src_size):
         save_black_planes('axial', os.path.join(landmark_output_folder, axial_image_filename), 'g')
         save_black_planes('coronal', os.path.join(landmark_output_folder, coronal_image_filename), 'r')
         save_black_planes('sagittal', os.path.join(landmark_output_folder, sagittal_image_filename), 'y')
