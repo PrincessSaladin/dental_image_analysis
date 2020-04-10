@@ -43,7 +43,7 @@ __C.dataset.num_classes = 3
 __C.dataset.num_landmarks = 138
 
 # the resolution on which segmentation is performed
-__C.dataset.spacing = [6.5, 6.5, 6.5]
+__C.dataset.crop_spacing = [6.5, 6.5, 6.5]
 
 # the sampling crop size, e.g., determine the context information
 __C.dataset.crop_size = [32, 32, 32]
@@ -132,4 +132,4 @@ __C.train.save_epochs = 10
 __C.debug = {}
 
 # whether to save input crops
-__C.debug.save_inputs = True
+__C.debug.save_inputs = False

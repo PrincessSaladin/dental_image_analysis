@@ -60,12 +60,12 @@ class RegressionDataset(Dataset):
     """ training data set for volumetric segmentation """
 
     def __init__(self, imlist_file, num_classes, landmark_folder, num_landmarks,
-                 spacing, crop_size, sampling_method, random_translation,
+                 crop_spacing, crop_size, sampling_method, random_translation,
                  interpolation, crop_normalizers):
         """ constructor
         :param imlist_file: image-segmentation list file
         :param num_classes: the number of classes
-        :param spacing: the resolution, e.g., [1, 1, 1]
+        :param crop_spacing: the resolution, e.g., [1, 1, 1]
         :param crop_size: crop size, e.g., [96, 96, 96]
         :param sampling_method: 'GLOBAL', 'MASK'
         :param random_translation: random translation
@@ -81,8 +81,8 @@ class RegressionDataset(Dataset):
         self.landmark_folder = landmark_folder
         self.num_landmarks = num_landmarks
         
-        self.spacing = np.array(spacing, dtype=np.double)
-        assert self.spacing.size == 3, 'only 3-element of spacing is supported'
+        self.crop_spacing = np.array(crop_spacing, dtype=np.double)
+        assert self.crop_spacing.size == 3, 'only 3-element of spacing is supported'
 
         self.crop_size = np.array(crop_size, dtype=np.int32)
         assert self.crop_size.size == 3, 'only 3-element of crop size is supported'
@@ -117,7 +117,7 @@ class RegressionDataset(Dataset):
 
         origin = image.GetOrigin()
         im_size_mm = [image.GetSize()[idx] * image.GetSpacing()[idx] for idx in range(3)]
-        crop_size_mm = self.crop_size * self.spacing
+        crop_size_mm = self.crop_size * self.crop_spacing
 
         sp = np.array(origin, dtype=np.double)
         for i in range(3):
@@ -194,7 +194,7 @@ class RegressionDataset(Dataset):
 
         # sample a crop from image and normalize it
         for idx in range(len(images)):
-            images[idx] = crop_image(images[idx], center, self.crop_size, self.spacing, self.interpolation)
+            images[idx] = crop_image(images[idx], center, self.crop_size, self.crop_spacing, self.interpolation)
 
             if self.crop_normalizers[idx] is not None:
                 images[idx] = self.crop_normalizers[idx](images[idx])

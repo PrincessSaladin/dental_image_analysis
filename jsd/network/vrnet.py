@@ -53,7 +53,7 @@ class RegressionNet(nn.Module):
         self.down_256 = DownBlock(128, 3)
         self.down_512 = DownBlock(256, 3)
         
-        shape = [in_shape[idx] // self.max_stride() for idx in range(3)]
+        shape = [in_shape[2 - idx] // self.max_stride() for idx in range(3)]
         self.out_block = landmark_output_block(shape, 512, out_channels)
 
     def forward(self, input):

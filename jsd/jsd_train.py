@@ -15,8 +15,9 @@ from segmentation3d.dataloader.sampler import EpochConcateSampler
 from segmentation3d.loss.focal_loss import FocalLoss
 from segmentation3d.loss.multi_dice_loss import MultiDiceLoss
 from segmentation3d.utils.file_io import load_config, setup_logger
-from segmentation3d.utils.model_io import load_checkpoint, save_checkpoint
 from jsd.dataloader.dataset import RegressionDataset
+from jsd.utils.model_io import load_checkpoint, save_checkpoint
+
 
 def train(config_file):
     """ Medical image segmentation training engine
@@ -56,7 +57,7 @@ def train(config_file):
                 num_classes=cfg.dataset.num_classes,
                 landmark_folder=cfg.general.landmark_folder,
                 num_landmarks=cfg.dataset.num_landmarks,
-                spacing=cfg.dataset.spacing,
+                crop_spacing=cfg.dataset.crop_spacing,
                 crop_size=cfg.dataset.crop_size,
                 sampling_method=cfg.dataset.sampling_method,
                 random_translation=cfg.dataset.random_translation,

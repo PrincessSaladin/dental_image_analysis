@@ -8,7 +8,7 @@ def test_vrnet():
   input_tensor = torch.randn([batch_size, in_channel, dim_z, dim_y, dim_x])
   
   input_channel, output_channel = 1, 414
-  network = RegressionNet([dim_z, dim_y, dim_x], input_channel, output_channel)
+  network = RegressionNet([dim_x, dim_y, dim_z], input_channel, output_channel)
   output_tensor = network(input_tensor)
   print(output_tensor.shape)
 
