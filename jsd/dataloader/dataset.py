@@ -210,6 +210,6 @@ class RegressionDataset(Dataset):
         # convert to tensors
         im = convert_image_to_tensor(images)
         # seg = convert_image_to_tensor(seg)
-        lm = torch.from_numpy(np.array(landmarks))
+        lm = torch.from_numpy(np.array(landmarks)).float()
 
         return im, lm, frame, case_name
