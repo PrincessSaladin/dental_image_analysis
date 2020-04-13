@@ -249,7 +249,7 @@ def segmentation(input_path, model_folder, output_folder, gpu_id):
     begin = time.time()
     
     # convert to csv file
-    landmarks_pred = voi_landmarks_preds[0].numpy()
+    landmarks_pred = voi_landmarks_preds[0].cpu().numpy()
     batch_size, num_landmark_coords = landmarks_pred.shape
     num_landmarks = model['num_landmarks']
     assert batch_size == 1 and num_landmark_coords == num_landmarks * 3
