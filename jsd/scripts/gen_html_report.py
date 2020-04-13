@@ -1,5 +1,4 @@
 import argparse
-from collections import OrderedDict
 import glob
 import os
 
@@ -96,7 +95,7 @@ if __name__ == '__main__':
     print("# landmark files in the both folder: {}".format(
       len(detection_landmark_csvs)))
     
-  label_landmarks = OrderedDict()
+  label_landmarks = {}
   for label_landmark_csv in label_landmark_csvs:
     file_name = os.path.basename(label_landmark_csv).split('.')[0]
     landmarks = load_coordinates_from_csv(label_landmark_csv)
@@ -106,7 +105,7 @@ if __name__ == '__main__':
     os.makedirs(args.output_folder)
   
   if usage_flag == 2:
-    detection_landmarks = OrderedDict()
+    detection_landmarks = {}
     for detection_landmark_csv in detection_landmark_csvs:
       file_name = os.path.basename(detection_landmark_csv).split('.')[0]
       landmarks = load_coordinates_from_csv(detection_landmark_csv)
@@ -126,4 +125,3 @@ if __name__ == '__main__':
     if usage_flag == 2:
       gen_plane_images(args.image_folder, detection_landmarks, 'detection',
                        args.contrast_range, args.resolution, args.output_folder)
-  
