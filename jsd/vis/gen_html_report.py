@@ -417,7 +417,7 @@ def gen_analysis_text(num_data, usage_flag, labelled_landmark, landmark_name, er
     median_error = error_summary.median_error_tp[landmark_name]
     max_error = error_summary.max_error_tp[landmark_name]
     analysis_text += r'<p style="color:black;">TP (TPR): {0} ({1:.2f}%)</p>'.format(len(tp_cases), len(tp_cases) / num_data * 100)
-    analysis_text += r'<p style="color:black;">TN (TNR): {0} ({1:.2f}%)</p>'.format(len(tn_cases), len(fn_cases) / num_data * 100)
+    analysis_text += r'<p style="color:black;">TN (TNR): {0} ({1:.2f}%)</p>'.format(len(tn_cases), len(tn_cases) / num_data * 100)
     analysis_text += r'<p style="color:black;">FP (FPR): {0} ({1:.2f}%)</p>'.format(len(fp_cases), len(fp_cases) / num_data * 100)
     analysis_text += r'<p style="color:black;">FN (FNR): {0} ({1:.2f}%)</p>'.format(len(fn_cases), len(fn_cases) / num_data * 100)
     analysis_text += r'<p style="color:black;">mean (std): {0:.2f} ({1:.2f})</p>'.format(mean_error, std_error)
