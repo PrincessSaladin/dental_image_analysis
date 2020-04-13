@@ -2,9 +2,9 @@
 import numpy as np
 import os
 import webbrowser
-from jsd.vis.error_analysis import ErrorAnalysis
-from jsd.vis.error_analysis import BaselineBenchmark
+from jsd.vis.error_analysis import error_analysis
 from jsd.vis.gen_images import get_landmarks_stat
+
 
 def AddDocumentText(original_text, new_text_to_add):
   return original_text + r'+"{0}"'.format(new_text_to_add)
@@ -326,42 +326,58 @@ def gen_html_report(landmarks_list, usage_flag, output_folder):
     html_report_name: The HTML report file name.
   """
   labelled_landmarks = landmarks_list[0]
-  labelled_landmarks_stat = get_landmarks_stat(labelled_landmarks)
 
   if usage_flag == 2:
     detected_landmarks = landmarks_list[1]
-    detected_landmarks_stat = get_landmarks_stat(detected_landmarks)
     assert len(labelled_landmarks.keys()) == len(detected_landmarks.keys())
 
-  image_list = list(labelled_landmarks.keys())
-  for landmark_name in labelled_landmarks[image_list[0]].keys():
+    # sort the labelled landmarks according to detection error
+    error_summary = error_analysis(labelled_landmarks, detected_landmarks)
+
+  landmark_name_list = labelled_landmarks[list(labelled_landmarks.keys())[0]].keys()
+  for landmark_name in landmark_name_list:
     print("Generating html report for landmark {}.".format(landmark_name))
     image_link_template = r"<div class='content'><img border=0  src= '{0}'  hspace=1  width={1} class='pic'></div>"
     error_info_template = r'<b>Labelled</b>: [{0:.2f}, {1:.2f}, {2:.2f}];'
     document_text = r'"<h1>check predicted coordinates:</h1>"'
     document_text += "\n"
 
-    for image_idx, image_name in enumerate(image_list):
-      label_landmark_world = labelled_landmarks[image_name][landmark_name]
-      if usage_flag == 1:
-        document_text = gen_row_for_html(usage_flag, image_link_template, error_info_template, document_text, image_list,
-                                    image_idx, landmark_name, [label_landmark_world], picture_folder='./pictures', width=200)
-      elif usage_flag == 2:
+    if usage_flag == 1:
+      image_list = list(labelled_landmarks.keys())
+      for image_idx, image_name in enumerate(image_list):
+        label_landmark_world = labelled_landmarks[image_name][landmark_name]
+        document_text = \
+          gen_row_for_html(usage_flag, image_link_template, error_info_template,
+                           document_text, image_list, image_idx, landmark_name,
+                           [label_landmark_world], None)
+        
+    elif usage_flag == 2:
+      image_list = error_summary.all_cases[landmark_name]
+      error_sorted_index = error_summary.error_sorted_index
+      for image_idx in error_sorted_index[landmark_name]:
+        image_name = image_list[image_idx]
+        label_landmark_world = labelled_landmarks[image_name][landmark_name]
         detected_landmark_world = detected_landmarks[image_name][landmark_name]
+        error_info_template = r'<b>Labelled</b>: [{0:.2f}, {1:.2f}, {2:.2f}];'
         error_info_template += r'<b>Detected</b>: [{3:.2f}, {4:.2f}, {5:.2f}];  '
-        error_info_template += r'<b>Error</b>: x:{6:.2f}; y:{7:.2f}; z:{8:.2f}; L2:{9:.2f}'
-        document_text = gen_row_for_html(usage_flag, image_link_template, error_info_template, document_text, image_list,
-                                    image_idx, landmark_name, [label_landmark_world, detected_landmark_world], picture_folder='./pictures', width=200)
+        error_info_template += r'<b>Type</b>: {6};'
+        error_info_template += r'<b>Error</b>: x:{7:.2f}; y:{8:.2f}; z:{9:.2f}; L2:{10:.2f};'
+        document_text = \
+          gen_row_for_html(usage_flag, image_link_template, error_info_template,
+                           document_text, image_list, image_idx, landmark_name,
+                           [label_landmark_world, detected_landmark_world],
+                            error_summary)
 
-      else:
-        raise ValueError('Undefined usage flag!')
+    else:
+      raise ValueError('Undefined usage flag!')
 
     if usage_flag == 1:
-      analysis_text = gen_analysis_text(len(image_list), usage_flag, [labelled_landmarks_stat[landmark_name]])
+      analysis_text = gen_analysis_text(len(image_list), usage_flag,
+                                        labelled_landmarks, landmark_name, None)
 
     elif usage_flag == 2:
       analysis_text = gen_analysis_text(len(image_list), usage_flag,
-        [labelled_landmarks_stat[landmark_name], detected_landmarks_stat[landmark_name]])
+                                        labelled_landmarks, landmark_name, error_summary)
 
     else:
       raise ValueError('Undefined usage float!')
@@ -375,34 +391,44 @@ def gen_html_report(landmarks_list, usage_flag, output_folder):
     WriteToHtmlReportFile(document_text, analysis_text, html_report_path, width=200)
 
 
-def gen_analysis_text(num_data, usage_flag, landmarks):
+def gen_analysis_text(num_data, usage_flag, labelled_landmark, landmark_name, error_summary):
   """
   Generate error analysis text for the html report.
   """
   analysis_text = "There are {0} cases in total, ".format(num_data)
   analysis_text += "\n"
 
-  labelled_landmarks = landmarks[0]
-  analysis_text += r'<p style="color:blue;">{0} cases do not contain this landmark: {1}</p>'.format(
-    len(labelled_landmarks['neg']), labelled_landmarks['neg'])
+  labelled_landmarks_stat = get_landmarks_stat(labelled_landmark)
+  
+  if len(labelled_landmarks_stat[landmark_name]['neg']) > 0:
+    analysis_text += r'<p style="color:blue;">{0} cases do not contain this landmark: {1}</p>'.format(
+      len(labelled_landmarks_stat[landmark_name]['neg']), labelled_landmarks_stat[landmark_name]['neg'])
+  else:
+    analysis_text += r'<p style="color:blue;"> All cases contain this landmark.</p>'
   analysis_text += "<p> </p>"
 
   if usage_flag == 2:
-    detected_landmarks = landmarks[1]
-    TP_cases = set(detected_landmarks['pos']) & set(labelled_landmarks['pos'])
-    TN_cases = set(detected_landmarks['neg']) & set(labelled_landmarks['neg'])
-    FP_cases = set(detected_landmarks['pos']) & set(labelled_landmarks['neg'])
-    FN_cases = set(detected_landmarks['neg']) & set(labelled_landmarks['pos'])
-    analysis_text += r'<p style="color:blue;">TP (TPR): {0} ({1})</p>'.format(len(TP_cases), len(TP_cases) / num_data)
-    analysis_text += r'<p style="color:blue;">TN (TNR): {0} ({1})</p>'.format(len(TN_cases), len(TN_cases) / num_data)
-    analysis_text += r'<p style="color:blue;">FP (FPR): {0} ({1})</p>'.format(len(FP_cases), len(FP_cases) / num_data)
-    analysis_text += r'<p style="color:blue;">FN (FNR): {0} ({1})</p>'.format(len(FN_cases), len(FN_cases) / num_data)
+    tp_cases = error_summary.tp_cases[landmark_name]
+    tn_cases = error_summary.tn_cases[landmark_name]
+    fp_cases = error_summary.fp_cases[landmark_name]
+    fn_cases = error_summary.fn_cases[landmark_name]
+    mean_error = error_summary.mean_error_tp[landmark_name]
+    std_error = error_summary.std_error_tp[landmark_name]
+    median_error = error_summary.median_error_tp[landmark_name]
+    max_error = error_summary.max_error_tp[landmark_name]
+    analysis_text += r'<p style="color:black;">TP (TPR): {0} ({1:.2f}%)</p>'.format(len(tp_cases), len(tp_cases) / num_data * 100)
+    analysis_text += r'<p style="color:black;">TN (TNR): {0} ({1:.2f}%)</p>'.format(len(tn_cases), len(fn_cases) / num_data * 100)
+    analysis_text += r'<p style="color:black;">FP (FPR): {0} ({1:.2f}%)</p>'.format(len(fp_cases), len(fp_cases) / num_data * 100)
+    analysis_text += r'<p style="color:black;">FN (FNR): {0} ({1:.2f}%)</p>'.format(len(fn_cases), len(fn_cases) / num_data * 100)
+    analysis_text += r'<p style="color:black;">mean (std): {0:.2f} ({1:.2f})</p>'.format(mean_error, std_error)
+    analysis_text += r'<p style="color:black;">median: {0:.2f}</p>'.format(median_error)
+    analysis_text += r'<p style="color:black;">max: {0:.2f}</p>'.format(max_error)
 
   return analysis_text
 
 
 def gen_row_for_html(usage_flag, image_link_template, error_info_template, document_text, image_list,
-                 image_idx, landmark_name, landmark_worlds, picture_folder, width):
+                 image_idx, landmark_name, landmark_worlds, error_summary, picture_folder='./pictures', width=200):
   """
   Generate a line of html text contents for labelled cases, in the usage of label checking.
   """
@@ -426,18 +452,19 @@ def gen_row_for_html(usage_flag, image_link_template, error_info_template, docum
                        image_basename + '_detection_lm{}_sagittal.png'.format(landmark_name)]
     detected_point = landmark_worlds[1]
 
-    x_error = detected_point[0] - labelled_point[0]
-    y_error = detected_point[1] - labelled_point[1]
-    z_error = detected_point[2] - labelled_point[2]
-    l2_error = np.linalg.norm(
-      np.array(labelled_point) - np.array(detected_point))
-  
+    assert error_summary is not None
+    x_error = error_summary.error_dx[landmark_name][image_idx]
+    y_error = error_summary.error_dy[landmark_name][image_idx]
+    z_error = error_summary.error_dz[landmark_name][image_idx]
+    l2_error = error_summary.error_l2[landmark_name][image_idx]
+    type_error = error_summary.error_type[landmark_name][image_idx]
     error_info = error_info_template.format(labelled_point[0],
                                             labelled_point[1],
                                             labelled_point[2],
                                             detected_point[0],
                                             detected_point[1],
                                             detected_point[2],
+                                            type_error,
                                             x_error,
                                             y_error,
                                             z_error,

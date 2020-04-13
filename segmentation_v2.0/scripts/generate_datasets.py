@@ -375,7 +375,7 @@ def convert_case_44():
 
 
 def dataset_split():
-  data_folder = '/home/qinliu/projects/CT_Dental/data_debug'
+  data_folder = '/home/qinliu/projects/CT_Dental/data'
   dropped_cases_idx = [33, 45, 53, 55, 84, 88, 89, 104, 106, 108, 109]
   valid_cases = []
   for file in os.listdir(data_folder):
@@ -400,33 +400,34 @@ def dataset_split():
   print(testing_set)
   
   datasets_folder = '/home/qinliu/projects/CT_Dental/datasets'
+  data_server_folder = '/shenlab/lab_stor6/projects/CT_Dental/data'
   if not os.path.isdir(datasets_folder):
     os.makedirs(datasets_folder)
   
-  training_set_file = os.path.join(datasets_folder, 'train.txt')
+  training_set_file = os.path.join(datasets_folder, 'train_server.txt')
   with open(training_set_file, 'w') as fp:
     name_text = ''
     for file in training_set:
-      name_text = name_text + os.path.join(data_folder, file, 'org.mha') + '\n'
-      name_text = name_text + os.path.join(data_folder, file, 'seg.mha') + '\n'
+      name_text = name_text + os.path.join(data_server_folder, file, 'org.mha') + '\n'
+      name_text = name_text + os.path.join(data_server_folder, file, 'seg.mha') + '\n'
 
     fp.write(str(len(training_set)) + '\n' + name_text)
 
   training_set_for_testing_file = \
-    os.path.join(datasets_folder, 'train_for_testing.txt')
+    os.path.join(datasets_folder, 'train_for_testing_server.txt')
   with open(training_set_for_testing_file, 'w') as fp:
     name_text = ''
     for file in training_set:
-      file_path = os.path.join(data_folder, file, 'org.mha')
+      file_path = os.path.join(data_server_folder, file, 'org.mha')
       name_text += file + ' ' + file_path + '\n'
 
     fp.write(str(len(training_set)) + '\n' + name_text)
 
-  testing_set_file = os.path.join(datasets_folder, 'test.txt')
+  testing_set_file = os.path.join(datasets_folder, 'test_server.txt')
   with open(testing_set_file, 'w') as fp:
     name_text = ''
     for file in testing_set:
-      file_path = os.path.join(data_folder, file, 'org.mha')
+      file_path = os.path.join(data_server_folder, file, 'org.mha')
       name_text += file + ' ' + file_path + '\n'
       
     fp.write(str(len(testing_set)) + '\n' + name_text)
@@ -481,9 +482,21 @@ def merge_all_path_files_into_a_sigle_file():
   df.to_csv(output_file_folder, index=False, header=['source', 'destination'])
 
 
+def check_missing_landmark_files():
+  data_folder = '/home/qinliu/projects/CT_Dental/data'
+  landmark_folder = '/home/qinliu/projects/CT_Dental/landmark'
+  
+  data_list = os.listdir(data_folder)
+  for data in data_list:
+    if data.startswith('case'):
+      landmark_file = os.path.join(landmark_folder, '{}.csv'.format(data))
+      if not os.path.isfile(landmark_file):
+        print(data)
+
+
 if __name__ == "__main__":
   
-  steps = [9]
+  steps = [10]
   
   if 1 in steps:
     rename_files_for_dataset1()
@@ -511,3 +524,7 @@ if __name__ == "__main__":
     
   if 9 in steps:
     merge_all_path_files_into_a_sigle_file()
+    
+  if 10 in steps:
+    check_missing_landmark_files()
+    
