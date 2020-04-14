@@ -1,7 +1,8 @@
 # coding:utf-8
 import copy
 import os
-import webbrowser
+import pandas as pd
+
 from jsd.vis.error_analysis import error_analysis
 from jsd.vis.gen_images import get_landmarks_stat
 
@@ -13,29 +14,29 @@ def add_document_text(original_text, new_text_to_add):
   return original_text + r'+"{0}"'.format(new_text_to_add)
 
 
-def write_summary_html_report_for_all_landmarks(document_text, analysis_text, html_report_path):
+def write_summary_csv_report_for_all_landmarks(error_summary, csv_file_path):
   """
   Write a html report for all landmarks to summary the detection results
   """
-  f = open(html_report_path, 'w')
-  message = """
-    <html>
-    <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-      <title>result summary</title>
-    </head>
-    <body>
-      <h1> Summary:</h1>
-      %s
-      <script type="text/javascript">
-        document.write(%s)
-      </script>
-    </body>
-    </html>""" % (analysis_text, document_text)
-
-  f.write(message)
-  f.close()
-  # webbrowser.open(html_report_path, new = 1)
+  summary = []
+  for landmark_name in error_summary.all_cases.keys():
+    num_pos_cases = len(error_summary.tp_cases[landmark_name]) + \
+                    len(error_summary.fn_cases[landmark_name])
+    num_neg_cases = len(error_summary.tn_cases[landmark_name]) + \
+                    len(error_summary.fp_cases[landmark_name])
+    tpr = len(error_summary.tp_cases[landmark_name]) / max(1, num_pos_cases) * 100
+    tnr = len(error_summary.tn_cases[landmark_name]) / max(1, num_neg_cases) * 100
+    mean_error = error_summary.mean_error_tp[landmark_name]
+    std_error = error_summary.std_error_tp[landmark_name]
+    median_error = error_summary.median_error_tp[landmark_name]
+    max_error = error_summary.max_error_tp[landmark_name]
+    summary.append([landmark_name, num_pos_cases, num_neg_cases, tpr, tnr, mean_error,
+                    std_error, median_error, max_error])
+  
+  columns = ['landmark_name', 'pos_cases', 'neg_cases', 'TPR (%)', 'TNR (%)',
+             'mean error (mm)', 'stddev', 'median error (mm)', 'max error (mm)']
+  df = pd.DataFrame(data=summary, columns=columns)
+  df.to_csv(csv_file_path, index=False)
 
 
 def write_html_report_for_single_landmark(document_text, analysis_text, html_report_path, width):
@@ -82,7 +83,6 @@ def write_html_report_for_single_landmark(document_text, analysis_text, html_rep
 
   f.write(message)
   f.close()
-  # webbrowser.open(html_report_path, new = 1)
 
 
 def add_three_images(document_text, image_link_template, image_folder, images, width):
@@ -179,9 +179,10 @@ def gen_html_report(landmarks_list, usage_flag, output_folder):
     html_report_path = os.path.join(html_report_folder, html_report_name)
     write_html_report_for_single_landmark(document_text, analysis_text, html_report_path, width=200)
 
-  summary_html_report_name = 'summary.html'
-  summary_html_path = os.path.join(output_folder, summary_html_report_name)
-  write_summary_html_report_for_all_landmarks('', '', summary_html_path)
+  if usage_flag == 2:
+    summary_csv_report_name = 'summary.csv'
+    summary_csv_path = os.path.join(output_folder, summary_csv_report_name)
+    write_summary_csv_report_for_all_landmarks(error_summary, summary_csv_path)
 
 
 def gen_analysis_text(num_data, usage_flag, labelled_landmark, landmark_name, error_summary):
