@@ -1,4 +1,5 @@
 # coding:utf-8
+import copy
 import os
 import webbrowser
 from jsd.vis.error_analysis import error_analysis
@@ -187,32 +188,42 @@ def gen_analysis_text(num_data, usage_flag, labelled_landmark, landmark_name, er
   """
   Generate error analysis text for the html report.
   """
-  analysis_text = "There are {0} cases in total, ".format(num_data)
-  analysis_text += "\n"
-
+  analysis_text = "# cases in total: {0}.".format(num_data)
   labelled_landmarks_stat = get_landmarks_stat(labelled_landmark)
   
+  analysis_text += r'<p style="color:black;"># cases having this landmark (Pos. cases): {0}.</p>'.format(
+    len(labelled_landmarks_stat[landmark_name]['pos']))
+  analysis_text += r'<p style="color:black;"># cases missing this landmark (Neg. cases): {}.</p>'.format(
+    len(labelled_landmarks_stat[landmark_name]['neg']))
   if len(labelled_landmarks_stat[landmark_name]['neg']) > 0:
-    analysis_text += r'<p style="color:blue;">{0} cases do not contain this landmark: {1}</p>'.format(
-      len(labelled_landmarks_stat[landmark_name]['neg']), labelled_landmarks_stat[landmark_name]['neg'])
-  else:
-    analysis_text += r'<p style="color:blue;"> All cases contain this landmark.</p>'
-  analysis_text += "<p> </p>"
+    missing_cases = copy.deepcopy(labelled_landmarks_stat[landmark_name]['neg'])
+    missing_cases.sort()
+    analysis_text += r'{}'.format(missing_cases)
 
   if usage_flag == 2:
     tp_cases = error_summary.tp_cases[landmark_name]
     tn_cases = error_summary.tn_cases[landmark_name]
     fp_cases = error_summary.fp_cases[landmark_name]
     fn_cases = error_summary.fn_cases[landmark_name]
+    num_pos_cases = len(tp_cases) + len(fn_cases)
+    num_neg_cases = len(tn_cases) + len(fp_cases)
     mean_error = error_summary.mean_error_tp[landmark_name]
     std_error = error_summary.std_error_tp[landmark_name]
     median_error = error_summary.median_error_tp[landmark_name]
     max_error = error_summary.max_error_tp[landmark_name]
-    analysis_text += r'<p style="color:black;">TP (TPR): {0} ({1:.2f}%)</p>'.format(len(tp_cases), len(tp_cases) / num_data * 100)
-    analysis_text += r'<p style="color:black;">TN (TNR): {0} ({1:.2f}%)</p>'.format(len(tn_cases), len(tn_cases) / num_data * 100)
-    analysis_text += r'<p style="color:black;">FP (FPR): {0} ({1:.2f}%)</p>'.format(len(fp_cases), len(fp_cases) / num_data * 100)
-    analysis_text += r'<p style="color:black;">FN (FNR): {0} ({1:.2f}%)</p>'.format(len(fn_cases), len(fn_cases) / num_data * 100)
-    analysis_text += r'<p style="color:black;">mean (std): {0:.2f} ({1:.2f})</p>'.format(mean_error, std_error)
+    analysis_text += r'<p style="color:red;"> Landmark classification Error: </p>'
+    analysis_text += r'<p style="color:black;">TP (TPR): {0} ({1:.2f}%)</p>'.format(
+      len(tp_cases), len(tp_cases) / max(1, num_pos_cases) * 100)
+    analysis_text += r'<p style="color:black;">TN (TNR): {0} ({1:.2f}%)</p>'.format(
+      len(tn_cases), len(tn_cases) / max(1, num_neg_cases) * 100)
+    analysis_text += r'<p style="color:black;">FP (FPR): {0} ({1:.2f}%)</p>'.format(
+      len(fp_cases), len(fp_cases) / max(1, num_neg_cases) * 100)
+    analysis_text += r'<p style="color:black;">FN (FNR): {0} ({1:.2f}%)</p>'.format(
+      len(fn_cases), len(fn_cases) / max(1, num_pos_cases) * 100)
+    analysis_text += r'<p style="color:red;"> Landmark distance Error for the {} TP cases (unit: mm): </p>'.format(
+      len(tp_cases))
+    analysis_text += r'<p style="color:black;">mean (std): {0:.2f} ({1:.2f})</p>'.format(
+      mean_error, std_error)
     analysis_text += r'<p style="color:black;">median: {0:.2f}</p>'.format(median_error)
     analysis_text += r'<p style="color:black;">max: {0:.2f}</p>'.format(max_error)
 

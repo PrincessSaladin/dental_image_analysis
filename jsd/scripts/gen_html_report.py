@@ -119,9 +119,11 @@ if __name__ == '__main__':
   gen_html_report(landmark_list, usage_flag, args.output_folder)
   
   if args.generate_pictures:
+    print('Start generating planes for the labelled landmarks.')
     gen_plane_images(args.image_folder, label_landmarks, 'label',
                      args.contrast_range, args.resolution, args.output_folder)
   
     if usage_flag == 2:
+      print('Start generating planes for the detected landmarks.')
       gen_plane_images(args.image_folder, detection_landmarks, 'detection',
                        args.contrast_range, args.resolution, args.output_folder)
