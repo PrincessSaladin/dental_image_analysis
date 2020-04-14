@@ -14,29 +14,30 @@ def add_document_text(original_text, new_text_to_add):
   return original_text + r'+"{0}"'.format(new_text_to_add)
 
 
-def write_summary_csv_report_for_all_landmarks(error_summary, csv_file_path):
+def write_summary_csv_report_for_all_landmarks(error_summary, csv_file_path, landmark_names):
   """
   Write a html report for all landmarks to summary the detection results
   """
   summary = []
-  for landmark_name in error_summary.all_cases.keys():
-    num_pos_cases = len(error_summary.tp_cases[landmark_name]) + \
-                    len(error_summary.fn_cases[landmark_name])
-    num_neg_cases = len(error_summary.tn_cases[landmark_name]) + \
-                    len(error_summary.fp_cases[landmark_name])
-    tpr = len(error_summary.tp_cases[landmark_name]) / max(1, num_pos_cases) * 100
-    tnr = len(error_summary.tn_cases[landmark_name]) / max(1, num_neg_cases) * 100
-    mean_error = error_summary.mean_error_tp[landmark_name]
-    std_error = error_summary.std_error_tp[landmark_name]
-    median_error = error_summary.median_error_tp[landmark_name]
-    max_error = error_summary.max_error_tp[landmark_name]
-    summary.append([landmark_name, num_pos_cases, num_neg_cases, tpr, tnr, mean_error,
-                    std_error, median_error, max_error])
+  for landmark_idx in error_summary.all_cases.keys():
+    num_pos_cases = len(error_summary.tp_cases[landmark_idx]) + \
+                    len(error_summary.fn_cases[landmark_idx])
+    num_neg_cases = len(error_summary.tn_cases[landmark_idx]) + \
+                    len(error_summary.fp_cases[landmark_idx])
+    tpr = len(error_summary.tp_cases[landmark_idx]) / max(1, num_pos_cases) * 100
+    tnr = len(error_summary.tn_cases[landmark_idx]) / max(1, num_neg_cases) * 100
+    mean_error = error_summary.mean_error_tp[landmark_idx]
+    std_error = error_summary.std_error_tp[landmark_idx]
+    median_error = error_summary.median_error_tp[landmark_idx]
+    max_error = error_summary.max_error_tp[landmark_idx]
+    landmark_name = landmark_names[landmark_idx]
+    summary.append([landmark_idx, landmark_name, num_pos_cases, num_neg_cases,
+                    tpr, tnr, mean_error, std_error, median_error, max_error])
   
-  columns = ['landmark_name', 'pos_cases', 'neg_cases', 'TPR (%)', 'TNR (%)',
+  columns = ['landmark_idx', 'landmark_name', 'pos_cases', 'neg_cases', 'TPR (%)', 'TNR (%)',
              'mean error (mm)', 'stddev', 'median error (mm)', 'max error (mm)']
   df = pd.DataFrame(data=summary, columns=columns)
-  df.to_csv(csv_file_path, index=False)
+  df.to_csv(csv_file_path, index=False, float_format='%.2f')
 
 
 def write_html_report_for_single_landmark(document_text, analysis_text, html_report_path, width):
@@ -97,7 +98,7 @@ def add_three_images(document_text, image_link_template, image_folder, images, w
   return document_text
 
 
-def gen_html_report(landmarks_list, usage_flag, output_folder):
+def gen_html_report(landmarks_list, landmark_names, usage_flag, output_folder):
   """
   Generate landmark evaluation HTML report.
   Input arguments:
@@ -182,7 +183,7 @@ def gen_html_report(landmarks_list, usage_flag, output_folder):
   if usage_flag == 2:
     summary_csv_report_name = 'summary.csv'
     summary_csv_path = os.path.join(output_folder, summary_csv_report_name)
-    write_summary_csv_report_for_all_landmarks(error_summary, summary_csv_path)
+    write_summary_csv_report_for_all_landmarks(error_summary, summary_csv_path, landmark_names)
 
 
 def gen_analysis_text(num_data, usage_flag, labelled_landmark, landmark_name, error_summary):

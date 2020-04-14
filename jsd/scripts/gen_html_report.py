@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import pandas as pd
 
 from jsd.vis.gen_images import gen_plane_images, load_coordinates_from_csv
 from jsd.vis.gen_html_report import gen_html_report
@@ -13,6 +14,7 @@ def parse_and_check_arguments():
   default_image_folder = '/home/qinliu/projects/CT_Dental/data'
   default_label_folder = '/home/qinliu/projects/CT_Dental/landmark'
   default_detection_folder = '/home/qinliu/projects/CT_Dental/results/model_0411_2020'
+  default_landmark_names_file = '/home/qinliu/projects/CT_Dental/landmark/landmark_name.csv'
   default_resolution = [1.5, 1.5, 1.5]
   default_contrast_range = None
   default_output_folder = '/tmp/data/CT_Dental/landmark_html'
@@ -29,6 +31,9 @@ def parse_and_check_arguments():
   parser.add_argument('--detection_folder', type=str,
                       default=default_detection_folder,
                       help='A folder where CSV files containing detected or baseline landmark coordinates are stored.')
+  parser.add_argument('--landmark_names_file', type=str,
+                      default=default_landmark_names_file,
+                      help='A CSV file containing landmark names.')
   parser.add_argument('--resolution', type=list,
                       default=default_resolution,
                       help="Resolution of the snap shot images.")
@@ -43,6 +48,20 @@ def parse_and_check_arguments():
                       help='Folder containing the generated snapshot images.')
   
   return parser.parse_args()
+
+
+def read_landmark_names(landmark_names_file):
+  """
+  Read the landmark names from a csv file.
+  """
+  landmark_names_dict = {}
+  df = pd.read_csv(landmark_names_file)
+  landmark_idx = list(df['landmark_idx'])
+  landmark_name = list(df['landmark_name'])
+  for idx in range(len(landmark_idx)):
+    landmark_names_dict.update({idx:landmark_name[idx]})
+  
+  return landmark_names_dict
 
 
 if __name__ == '__main__':
@@ -116,7 +135,8 @@ if __name__ == '__main__':
   if usage_flag == 2:
     landmark_list.append(detection_landmarks)
 
-  gen_html_report(landmark_list, usage_flag, args.output_folder)
+  landmark_names_dict = read_landmark_names(args.landmark_names_file)
+  gen_html_report(landmark_list, landmark_names_dict, usage_flag, args.output_folder)
   
   if args.generate_pictures:
     print('Start generating planes for the labelled landmarks.')
