@@ -79,12 +79,12 @@ def add_landmark_name():
       for idx, row in df.iterrows():
         content.append([landmark_name_dict[idx + 1], row['x'], row['y'], row['z']])
       df_out = pd.DataFrame(data=content, columns=['name', 'x', 'y', 'z'])
-      df_out.to_csv(os.path.join(landmark_file_output_folder, '{}.csv'.format(landmark_file)), index=False)
+      df_out.to_csv(os.path.join(landmark_file_output_folder, landmark_file), index=False)
 
 
 if __name__ == '__main__':
   
-  steps = [0]
+  steps = [2]
   
   if 1 in steps:
     rename_landmark_files()
