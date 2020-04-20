@@ -33,7 +33,7 @@ def gen_single_landmark_mask(ref_image, landmark_df, spacing, pos_upper_bound, n
 
           distance = np.linalg.norm(np.array([x, y, z], dtype=np.float32) - landmark_voxel)
           if distance < pos_upper_bound:
-            landmark_mask_npy[z, y, x] = landmark_label
+            landmark_mask_npy[z, y, x] = float(landmark_label)
           elif distance < neg_lower_bound and abs(landmark_mask_npy[z, y, x]) < 1e-6:
             landmark_mask_npy[z, y, x] = -1.0
 
@@ -77,7 +77,7 @@ def gen_landmark_batch_1_2mm():
   if not os.path.isdir(image_out_folder):
     os.makedirs(image_out_folder)
 
-  for image_name in image_names[123:]:
+  for image_name in image_names:
     print(image_name)
     landmark_df = pd.read_csv(os.path.join(landmark_folder, '{}.csv'.format(image_name)))
     target_landmark_df = {}

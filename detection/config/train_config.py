@@ -40,7 +40,7 @@ __C.general.target_organ_label = {
     'mandible': 2
 }
 
-__C.general.save_dir = 'model_0419_2020'
+__C.general.save_dir = '/mnt/projects/CT_Dental/models/model_0419_2020'
 
 __C.general.resume_epoch = -1
 
@@ -53,7 +53,7 @@ __C.dataset = {}
 
 __C.dataset.crop_spacing = [2, 2, 2]      # mm
 
-__C.dataset.crop_size = [32, 32, 32]   # voxel
+__C.dataset.crop_size = [48, 48, 48]   # voxel
 
 __C.dataset.sampling_size = [6, 6, 6]      # voxel
 
@@ -140,4 +140,4 @@ __C.debug = {}
 __C.debug.seed = 0
 
 # whether to save input crops
-__C.debug.save_inputs = False
+__C.debug.save_inputs = True

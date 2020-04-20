@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 
 from segmentation3d.dataloader.image_tools import select_random_voxels_in_multi_class_mask, \
   crop_image, convert_image_to_tensor, get_image_frame
-
+from detection.utils.landmark_utils import is_world_coordinate_valid, is_voxel_coordinate_valid
 
 def read_landmark_coords(image_name_list, landmark_file_path, target_landmark_label):
   """
@@ -105,7 +105,9 @@ class LandmarkDetectionDataset(Dataset):
     self.positive_upper_bound = positive_upper_bound
     self.negative_lower_bound = negative_lower_bound
     self.num_pos_patches_per_image = num_pos_patches_per_image
+    assert self.num_pos_patches_per_image >= 0
     self.num_neg_patches_per_image = num_neg_patches_per_image
+    assert self.num_neg_patches_per_image >= 0
     # + 1 for background
     self.num_landmark_classes = len(target_landmark_label) + 1
     self.num_organ_classes = len(target_organ_label) + 1
@@ -115,6 +117,14 @@ class LandmarkDetectionDataset(Dataset):
     self.augmentation_translation = np.array(augmentation_translation, dtype=np.float32)
     self.interpolation = interpolation
     self.crop_normalizers = crop_normalizers
+
+    self.positive_perturbs = []
+    for dz in range(-positive_upper_bound, positive_upper_bound):
+      for dy in range(-positive_upper_bound, positive_upper_bound):
+        for dx in range(-positive_upper_bound, positive_upper_bound):
+          perturb = [dx, dy, dz]
+          if np.linalg.norm(perturb) <= positive_upper_bound:
+            self.positive_perturbs.append(perturb)
 
   def __len__(self):
     """ get the number of images in this dataset """
@@ -161,6 +171,68 @@ class LandmarkDetectionDataset(Dataset):
 
     center = np.array([(origin[idx] + end_point_world[idx]) / 2.0 for idx in range(3)], dtype=np.double)
     return center
+
+  def select_samples_in_the_landmark_mask(self, landmark_mask, landmark_df):
+    """
+    Select samples from the landmark mask.
+    :param landmark_mask: The landmark mask that voxels of different landmarks have different label.
+    :param landmark_df: The dictionary of the landmark coordinates.
+    :return: the landmark mask that has a balanced positive and negative sample voxels.
+    """
+    assert isinstance(landmark_mask, sitk.Image)
+
+    mask_npy = sitk.GetArrayFromImage(landmark_mask)
+    selected_mask_npy = np.zeros_like(mask_npy) - 1
+
+    sample_voxels = []
+
+    # set positive samples, which are centered at the landmark coordinates.
+    valid_landmark_idx = []
+    for idx in range(len(landmark_df['name'])):
+      landmark_world = landmark_df['coords'][idx]
+      if is_world_coordinate_valid(landmark_world):
+        valid_landmark_idx.append(idx)
+
+    image_size = landmark_mask.GetSize()
+    if len(valid_landmark_idx) > 0:
+      for _ in range(self.num_pos_patches_per_image):
+        landmark_idx = np.random.randint(0, len(valid_landmark_idx))
+        landmark_world = landmark_df['coords'][landmark_idx]
+        landmark_voxel = list(landmark_mask.TransformPhysicalPointToIndex(landmark_world))
+        if is_voxel_coordinate_valid(landmark_voxel, image_size):
+          perturbs_idx = np.random.randint(0, len(self.positive_perturbs))
+          for id in range(3):
+            landmark_voxel[id] += self.positive_perturbs[perturbs_idx][id]
+            landmark_voxel[id] = max(0, min(landmark_voxel[id], image_size[id] - 1))
+            sample_voxels.append(landmark_voxel)
+
+    # set negative samples, which are randomly selected from the background voxels.
+    if self.num_neg_patches_per_image > 0:
+      sample_neg_positions = select_random_voxels_in_multi_class_mask(
+        landmark_mask, self.num_neg_patches_per_image, 0
+      )
+      sample_voxels.extend(sample_neg_positions)
+
+    # assign values to the sampled area
+    for voxel in sample_voxels:
+      voxel_sp_x = max(0, voxel[0] - self.sampling_size[0] // 2)
+      voxel_ep_x = min(image_size[0] - 1, voxel_sp_x + self.sampling_size[0])
+      voxel_sp_y = max(0, voxel[1] - self.sampling_size[1] // 2)
+      voxel_ep_y = min(image_size[1] - 1, voxel_sp_y + self.sampling_size[1])
+      voxel_sp_z = max(0, voxel[2] - self.sampling_size[2] // 2)
+      voxel_ep_z = min(image_size[2] - 1, voxel_sp_z + self.sampling_size[2])
+      selected_mask_npy[voxel_sp_z:voxel_ep_z, voxel_sp_y:voxel_ep_y, voxel_sp_x:voxel_ep_x] = \
+        mask_npy[voxel_sp_z:voxel_ep_z, voxel_sp_y:voxel_ep_y, voxel_sp_x:voxel_ep_x]
+
+    # reorder the landmark label
+    for idx in valid_landmark_idx:
+      label = landmark_df['label'][idx]
+      selected_mask_npy[abs(selected_mask_npy - label) < 1e-1] = idx
+
+    selected_mask = sitk.GetImageFromArray(selected_mask_npy)
+    selected_mask.CopyInformation(landmark_mask)
+
+    return selected_mask
 
   def __getitem__(self, index):
     """ get a training sample - image(s) and segmentation pair
@@ -229,6 +301,9 @@ class LandmarkDetectionDataset(Dataset):
 
     organ_mask = crop_image(organ_mask, center, self.crop_size, self.crop_spacing, 'NN')
     landmark_mask = crop_image(landmark_mask, center, self.crop_size, self.crop_spacing, 'NN')
+    landmark_mask = self.select_samples_in_the_landmark_mask(
+      landmark_mask, self.landmark_coords_dict[image_name]
+    )
 
     # convert image and masks to tensors
     image_tensor = convert_image_to_tensor(images)

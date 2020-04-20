@@ -122,17 +122,29 @@ def train(config_file):
 
         # network forward and backward
         outputs = net(crops)
-        train_loss = loss_func(outputs, organ_masks)
-        train_loss.backward()
-
-        # update weights
-        opt.step()
 
         # save training crops for visualization
         if cfg.debug.save_inputs:
             batch_size = crops.size(0)
-            save_intermediate_results(list(range(batch_size)), crops, organ_masks, outputs, frames, filenames,
+            save_intermediate_results(list(range(batch_size)), crops, landmark_masks, outputs, frames, filenames,
                                       os.path.join(cfg.general.save_dir, 'batch_{}'.format(i)))
+
+        # select valid samples for landmark mask segmentation
+        assert outputs.shape[0] == landmark_masks.shape[0]
+        outputs = outputs.permute(0, 2, 3, 4, 1).contiguous()
+        outputs = outputs.view(-1, outputs.shape[4])
+        landmark_masks = landmark_masks.permute(0, 2, 3, 4, 1).contiguous()
+        landmark_masks = landmark_masks.view(-1, landmark_masks.shape[4])
+
+        selected_sample_indices = torch.nonzero(landmark_masks[:, 0] >= 0).squeeze()
+        landmark_masks = torch.index_select(landmark_masks, 0, selected_sample_indices)
+        outputs = torch.index_select(outputs, 0, selected_sample_indices)
+
+        train_loss = loss_func(outputs, landmark_masks)
+        train_loss.backward()
+
+        # update weights
+        opt.step()
 
         epoch_idx = batch_idx * cfg.train.batch_size // len(dataset)
         batch_idx += 1
