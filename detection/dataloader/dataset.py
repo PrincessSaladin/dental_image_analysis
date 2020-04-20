@@ -14,8 +14,29 @@ def read_landmark_coords(image_name_list, landmark_file_path, target_landmark_la
   Read a list of labelled landmark csv files and return a list of labelled
   landmarks.
   """
-  label_dict = {}
+  assert len(image_name_list) == len(landmark_file_path)
 
+  label_dict = {}
+  for idx, image_name in enumerate(image_name_list):
+    label_dict[image_name] = {}
+    label_dict[image_name]['label'] = []
+    label_dict[image_name]['name'] = []
+    label_dict[image_name]['coords'] = []
+    landmark_file_df = pd.read_csv(landmark_file_path[idx])
+
+    for row_idx in range(len(landmark_file_df)):
+      landmark_name = landmark_file_df['name'][row_idx]
+      if landmark_name in target_landmark_label.keys():
+        landmark_label = target_landmark_label[landmark_name]
+        x = landmark_file_df['x'][row_idx]
+        y = landmark_file_df['y'][row_idx]
+        z = landmark_file_df['z'][row_idx]
+        landmark_coords = [x, y, z]
+        label_dict[image_name]['label'].append(landmark_label)
+        label_dict[image_name]['name'].append(landmark_name)
+        label_dict[image_name]['coords'].append(landmark_coords)
+
+    assert len(label_dict[image_name]['name']) == len(target_landmark_label.keys())
 
   return label_dict
 
@@ -48,11 +69,11 @@ class LandmarkDetectionDataset(Dataset):
   """
   def __init__(self,
                mode,
-               image_list,
+               image_list_file,
                target_landmark_label,
                target_organ_label,
-               crop_spacing,
                crop_size,
+               crop_spacing,
                sampling_method,
                sampling_size,
                positive_upper_bound,
@@ -66,10 +87,10 @@ class LandmarkDetectionDataset(Dataset):
                interpolation,
                crop_normalizers):
     self.mode = mode
-    assert self.mode == 'train'
+    assert self.mode == 'train' or self.mode == 'Train'
 
     self.image_name_list, self.image_path_list, self.landmark_file_path, \
-    self.landmark_mask_path, self.organ_mask_path = read_image_list(image_list, self.mode)
+    self.landmark_mask_path, self.organ_mask_path = read_image_list(image_list_file, self.mode)
     assert len(self.image_name_list) == len(self.image_path_list)
 
     self.target_landmark_label = target_landmark_label
@@ -91,7 +112,7 @@ class LandmarkDetectionDataset(Dataset):
     self.augmentation_turn_on = augmentation_turn_on
     self.augmentation_orientation_radian = augmentation_orientation_radian
     self.augmentation_orientation_axis = augmentation_orientation_axis
-    self.augmentation_translation = augmentation_translation
+    self.augmentation_translation = np.array(augmentation_translation, dtype=np.float32)
     self.interpolation = interpolation
     self.crop_normalizers = crop_normalizers
 
@@ -111,6 +132,12 @@ class LandmarkDetectionDataset(Dataset):
   def num_modality(self):
     """ get the number of input image modalities """
     return 1
+
+  def num_landmark_classes(self):
+    return self.num_landmark_classes
+
+  def num_organ_classes(self):
+    return self.num_organ_classes
 
   def global_sample(self, image):
     """ random sample a position in the image
@@ -218,11 +245,10 @@ class LandmarkDetectionDataset(Dataset):
     landmark_mask_tensor = convert_image_to_tensor(landmark_mask)
 
     # convert landmark coords to tensor
-    landmark_labels = list(landmark_coords.keys())
-    landmark_labels.sort()
     landmark_coords_list = []
-    for idx in range(len(landmark_labels)):
-      coords = landmark_labels[landmark_labels[idx]]
+    indices = np.argsort(landmark_coords['label'])
+    for idx in indices:
+      coords = landmark_coords['coords'][idx]
       landmark_coords_list.append([coords[0], coords[1], coords[2]])
     landmark_coords_tensor = torch.from_numpy(np.array(landmark_coords_list, dtype=np.float32))
 
