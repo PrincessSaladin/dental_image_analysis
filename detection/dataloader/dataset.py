@@ -116,15 +116,6 @@ class LandmarkDetectionDataset(Dataset):
     self.interpolation = interpolation
     self.crop_normalizers = crop_normalizers
 
-    # perturb landmark center
-    self.positive_perturbs = []
-    for dz in range(-positive_upper_bound, positive_upper_bound):
-      for dy in range(-positive_upper_bound, positive_upper_bound):
-        for dx in range(-positive_upper_bound, positive_upper_bound):
-          perturb = [dx, dy, dz]
-          if np.linalg.norm(perturb) <= positive_upper_bound:
-            self.positive_perturbs.append(perturb)
-
   def __len__(self):
     """ get the number of images in this dataset """
     return len(self.image_name_list)
