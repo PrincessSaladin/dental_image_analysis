@@ -15,7 +15,7 @@ def weighted_voxel_center(image, threshold_min, threshold_max):
     image_npy[image_npy > threshold_max] = 0
     weight_sum = np.sum(image_npy)
     if weight_sum <= 0:
-        return [weight_sum, weight_sum, weight_sum]
+        return None
 
     image_npy_x = np.zeros_like(image_npy)
     for i in range(image_npy.shape[0]):
