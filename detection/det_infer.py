@@ -270,11 +270,12 @@ def segmentation(input_path, model_folder, output_folder, gpu_id):
           if voxel_coordinate is not None:
             world_coordinate = masked_landmark_mask_prob.TransformContinuousIndexToPhysicalPoint(voxel_coordinate)
             print("world coordinate of volume {0} landmark {1} is:[{2},{3},{4}]".format(
-              file_name_list[i], i, world_coordinate[0], world_coordinate[1], world_coordinate[2]))
+              file_name_list[i], j, world_coordinate[0], world_coordinate[1], world_coordinate[2]))
             detected_landmark.append(
                 [landmark_name, world_coordinate[0], world_coordinate[1], world_coordinate[2]]
             )
           else:
+            print("world coordinate of volume {0} landmark {1} is not detected.".format(file_name_list[i], j))
             detected_landmark.append([landmark_name, -1, -1, -1])
 
         detected_landmark_df = pd.DataFrame(data=detected_landmark, columns=['name', 'x', 'y', 'z'])
