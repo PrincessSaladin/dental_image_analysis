@@ -172,7 +172,8 @@ def train(config_file):
 
 def main():
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = '6'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+    os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
     long_description = "Training engine for 3d medical image landmark detection"
     parser = argparse.ArgumentParser(description=long_description)
