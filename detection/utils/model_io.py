@@ -33,7 +33,7 @@ def save_checkpoint(net, opt, epoch_idx, batch_idx, cfg, config_file, max_stride
              'interpolation':         cfg.dataset.interpolation,
              'in_channels':           num_modality,
              'num_organ_classes':     len(cfg.general.target_organ_label),
-             'num_landmark_classes:': len(cfg.general.target_landmark_label),
+             'num_landmark_classes': len(cfg.general.target_landmark_label),
              'crop_normalizers':      [normalizer.to_dict() for normalizer in cfg.dataset.crop_normalizers]}
 
     # save python check point
