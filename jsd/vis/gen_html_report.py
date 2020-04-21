@@ -1,18 +1,55 @@
 # coding:utf-8
-import numpy as np
+import copy
 import os
-import webbrowser
-from jsd.vis.error_analysis import ErrorAnalysis
-from jsd.vis.error_analysis import BaselineBenchmark
+import pandas as pd
+
+from jsd.vis.error_analysis import error_analysis
 from jsd.vis.gen_images import get_landmarks_stat
 
-def AddDocumentText(original_text, new_text_to_add):
+
+def add_document_text(original_text, new_text_to_add):
+  """
+  Add document text file
+  """
   return original_text + r'+"{0}"'.format(new_text_to_add)
 
-"""
-Write the texts to a html file.
-"""
-def WriteToHtmlReportFile(document_text, analysis_text, html_report_path, width):
+
+def write_summary_csv_report_for_all_landmarks(error_summary, csv_file_path, landmark_names):
+  """
+  Write a html report for all landmarks to summary the detection results
+  """
+  summary = []
+  for landmark_idx in error_summary.all_cases.keys():
+    num_pos_cases = len(error_summary.tp_cases[landmark_idx]) + \
+                    len(error_summary.fn_cases[landmark_idx])
+    num_neg_cases = len(error_summary.tn_cases[landmark_idx]) + \
+                    len(error_summary.fp_cases[landmark_idx])
+    if len(error_summary.tp_cases[landmark_idx]) == 0 and num_pos_cases == 0:
+      tpr = 100
+    else:
+      tpr = len(error_summary.tp_cases[landmark_idx]) / max(1, num_pos_cases) * 100
+    if len(error_summary.tn_cases[landmark_idx]) and num_neg_cases == 0:
+      tnr = 100
+    else:
+      tnr = len(error_summary.tn_cases[landmark_idx]) / max(1, num_neg_cases) * 100
+    mean_error = error_summary.mean_error_tp[landmark_idx]
+    std_error = error_summary.std_error_tp[landmark_idx]
+    median_error = error_summary.median_error_tp[landmark_idx]
+    max_error = error_summary.max_error_tp[landmark_idx]
+    landmark_name = landmark_names[landmark_idx]
+    summary.append([landmark_idx, landmark_name, num_pos_cases, num_neg_cases,
+                    tpr, tnr, mean_error, std_error, median_error, max_error])
+  
+  columns = ['landmark_idx', 'landmark_name', 'pos_cases', 'neg_cases', 'TPR (%)', 'TNR (%)',
+             'mean error (mm)', 'stddev', 'median error (mm)', 'max error (mm)']
+  df = pd.DataFrame(data=summary, columns=columns)
+  df.to_csv(csv_file_path, index=False, float_format='%.2f')
+
+
+def write_html_report_for_single_landmark(document_text, analysis_text, html_report_path, width):
+  """
+  Write the html report for a landmark.
+  """
   f = open(html_report_path, 'w')
   message = """
     <html>
@@ -53,262 +90,21 @@ def WriteToHtmlReportFile(document_text, analysis_text, html_report_path, width)
 
   f.write(message)
   f.close()
-  # webbrowser.open(html_report_path, new = 1)
 
 
-"""
-Generate landmark evaluation HTML report.
-Input arguments:
-  file_name_list:   The list of 3D volume file names including postfix.
-  point_dicts:      A list of dicts containing the labelled(detected,experiment) points' coordinates.
-  additional_info:  A dict containing the information of no_landmark, false positives 
-                    and miss detections.
-  usage_flag:       A integer indicating the usage of the html tool.
-                    1 for ground truth only
-                    2 for error analysis
-                    3 for benchmark comparison
-  output_folder:    The output folder containing the html report.
-  image_folder:     The image folder containing the captured 2D plane images.
-                    Must be a relative path to the output_folder.
-  html_report_name: The HTML report file name.
-"""
-def GenHtmlReport(file_name_list, point_dicts, additional_info, usage_flag,
-                  output_folder, image_folder='./images',
-                  html_report_name='result_analysis.html'):
-  # how many cases are involved.
-  num_data = len(file_name_list)
-
-  labelled_point_dict = point_dicts[0]
-  width = 500
-  # find the unlabelled cases.
-  tmp_set = set(file_name_list) - set(labelled_point_dict.keys())
-  additional_info.no_lm.extend(list(tmp_set))
-  additional_info.no_lm.sort()
-  image_link_template = r"<div class='content'><img border=0  src= '{0}'  hspace=1  width={1} class='pic'></div>"
-  error_info_template = r'<b>Labelled</b>: [{0:.2f}, {1:.2f}, {2:.2f}];  '
-  # truly_positive_files is defined to contain the normal cases(which have nothing to do
-  # with unlabelling, false positives and miss detections.)
-  truly_positive_files = list(labelled_point_dict.keys())
-
-  # if used for error analysis.
-  if usage_flag == 2:
-    detected_point_dict = point_dicts[1]
-    width = 300
-    tmp_set = set(labelled_point_dict.keys()) - set(detected_point_dict.keys())
-    additional_info.fn1.extend(list(tmp_set))
-    additional_info.fn1.sort()
-    tmp_set = set(detected_point_dict.keys()) - set(labelled_point_dict.keys())
-    additional_info.fp1.extend(list(tmp_set))
-    additional_info.fp1.sort()
-    error_info_template += r'<b>Detected</b>: [{3:.2f}, {4:.2f}, {5:.2f}];  '
-    error_info_template += r'<b>Error</b>: x:{6:.2f}; y:{7:.2f}; z:{8:.2f}; L2:{9:.2f}'
-    error_summary, truly_positive_files = ErrorAnalysis(labelled_point_dict, detected_point_dict)
-
-  # if used for benchmark comparison with baseline model.
-  if usage_flag == 3:
-    baseline_point_list = point_dicts[1]
-    experiment_point_list = point_dicts[2]
-    width = 200
-    tmp_set = set(labelled_point_dict.keys()) - set(baseline_point_list.keys())
-    additional_info.fn1.extend(list(tmp_set))
-    additional_info.fn1.sort()
-    tmp_set = set(baseline_point_list.keys()) - set(labelled_point_dict.keys())
-    additional_info.fp1.extend(list(tmp_set))
-    additional_info.fp1.sort()
-    tmp_set = set(labelled_point_dict.keys()) - set(experiment_point_list.keys())
-    additional_info.fn2.extend(list(tmp_set))
-    additional_info.fn2.sort()
-    tmp_set = set(experiment_point_list.keys()) - set(labelled_point_dict.keys())
-    additional_info.fp2.extend(list(tmp_set))
-    additional_info.fp2.sort()
-    error_info_template += r'<b>Baseline</b>: [{3:.2f}, {4:.2f}, {5:.2f}];  '
-    error_info_template += r'<b>Experiment</b>: [{6:.2f}, {7:.2f}, {8:.2f}];  '
-    error_info_template += r'<b>Error1</b>: x:{9:.2f}; y:{10:.2f}; z:{11:.2f}; L2:{12:.2f};'
-    error_info_template += r'<b>Error2</b>: x:{13:.2f}; y:{14:.2f}; z:{15:.2f}; L2:{16:.2f};'
-    error_info_template += r'<b>L2_difference</b>:{17:.2f}'
-    error_summarys, benchmark, truly_positive_files = BaselineBenchmark(labelled_point_dict, baseline_point_list, experiment_point_list)
-
-  document_text = r'"<h1>check predicted coordinates:</h1>"'
-  document_text += "\n"
-
-  for idx in range(len(truly_positive_files)):
-    if usage_flag == 1:
-      document_text = GenHtmlRowForLabelChecking(image_link_template, error_info_template, document_text, truly_positive_files,
-                                  idx, point_dicts, image_folder, width)
-      analysis_text = GenAnalysisText(num_data, truly_positive_files, additional_info, usage_flag)
-    elif usage_flag == 2:
-      document_text = GenHtmlRowForErrorAnalysis(image_link_template, error_info_template, document_text, truly_positive_files,
-                                                 idx, point_dicts, image_folder, error_summary, width)
-      analysis_text = GenAnalysisText(num_data, truly_positive_files, additional_info, usage_flag, error_summary)
-
-  abnormal_files = list(set(file_name_list) - set(truly_positive_files))
-  abnormal_files.sort()
-  for idx in range(len(abnormal_files)):
-    document_text = GenHtmlRowOfAbnormalfiles(image_link_template, document_text, abnormal_files,
-                                      idx, image_folder, usage_flag, width)
-
-  html_report_path = os.path.join(output_folder, html_report_name)
-  WriteToHtmlReportFile(document_text, analysis_text, html_report_path, width)
-
-
-def GenAnalysisText(num_data, truly_positive_files, additional_info, usage_flag, error_summary=None,benchmark=None):
-  analysis_text = "There are {0} cases in total,".format(num_data)
-  analysis_text += "\n"
-  analysis_text += r'<p style="color:blue;">{0} cases do not contain this landmark: {1}</p>'.format(
-    len(additional_info['no_lm']), additional_info['no_lm'])
-  analysis_text += "<p> </p>"
-
-  if usage_flag == 2:
-    analysis_text += r'<p style="color:red;">{0} false positives: {1}</p>'.format(len(additional_info['fp1']),
-                                                                                  additional_info['fp1'])
-    analysis_text += r'<p style="color:red;">{0} missings: {1}</p>'.format(len(additional_info['fn1']),
-                                                                          additional_info['fn1'])
-    analysis_text += r'<p>Error summary of the remaining {0} cases:</p>'.format(len(truly_positive_files))
-    analysis_text += r'<p>mean:{0:.2f}</p>'.format(error_summary.mean_error)
-    analysis_text += r'<p>median:{0:.2f}</p>'.format(error_summary.median_error)
-    analysis_text += r'<p>max:{0:.2f}</p>'.format(error_summary.max_error)
-    analysis_text += r'<p>min:{0:.2f}</p>'.format(error_summary.min_error)
-
-  if usage_flag == 3:
-    analysis_text += r'<p style="color:red;">{0} false positives of baseline: {1}</p>'.format(
-      len(additional_info['fp1']), additional_info['fp1'])
-    analysis_text += r'<p style="color:red;">{0} missings of baseline: {1}</p>'.format(len(additional_info['fn1']),
-                                                                                       additional_info['fn1'])
-    analysis_text += r'<p>Error summary of the remaining {0} cases of baseline:</p>'.format(len(truly_positive_files))
-    analysis_text += r'<p>mean:{0:.2f}</p>'.format(error_summary[0].mean_error)
-    analysis_text += r'<p>median:{0:.2f}</p>'.format(error_summary[0].median_error)
-    analysis_text += r'<p>max:{0:.2f}</p>'.format(error_summary[0].max_error)
-    analysis_text += r'<p>min:{0:.2f}</p>'.format(error_summary[0].min_error)
-
-    analysis_text += r'<p style="color:red;">{0} false positives of experiment: {1}</p>'.format(
-      len(additional_info['fp2']), additional_info['fp2'])
-    analysis_text += r'<p style="color:red;">{0} missings of experiment: {1}</p>'.format(len(additional_info['fn2']),
-                                                                                       additional_info['fn2'])
-    analysis_text += r'<p>Error summary of the remaining {0} cases of experiment:</p>'.format(len(truly_positive_files))
-    analysis_text += r'<p>mean:{0:.2f}</p>'.format(error_summary[1].mean_error)
-    analysis_text += r'<p>median:{0:.2f}</p>'.format(error_summary[1].median_error)
-    analysis_text += r'<p>max:{0:.2f}</p>'.format(error_summary[1].max_error)
-    analysis_text += r'<p>min:{0:.2f}</p>'.format(error_summary[1].min_error)
-
-    analysis_text += '<p style="color:red;">Change of each value(experiment to baseline):</p>'
-    analysis_text += '<p>mean:{0:.2f}</p>'.format(benchmark.mean_diff)
-    analysis_text += '<p>median:{0:.2f}</p>'.format(benchmark.median_diff)
-    analysis_text += '<p>max:{0:.2f}</p>'.format(benchmark.max_diff)
-    analysis_text += '<p>min:{0:.2f}</p>'.format(benchmark.min_diff)
-
-  return analysis_text
-
-
-def AddThreeImages(document_text, image_link_template, image_folder, images, width):
+def add_three_images(document_text, image_link_template, image_folder, images, width):
+  """
+  Add three plane images to the document text file
+  """
   for idx in range(3):
     document_text += "\n"
     image_info = r'<td>{0}</td>'.format(image_link_template.format(
       os.path.join(image_folder, images[idx]), width))
-    document_text = AddDocumentText(document_text, image_info)
+    document_text = add_document_text(document_text, image_info)
   return document_text
 
 
-"""
-Generate the text contents for abnormal cases, which contain the cases of unlabelled, false positives and miss detections. 
-"""
-def GenHtmlRowOfAbnormalfiles(image_link_template, document_text, abnormal_files, idx, image_folder, usage_flag, width):
-  file_name = abnormal_files[idx]
-  labelled_images = [file_name + '_labelled_axial.png',
-                     file_name + '_labelled_coronal.png',
-                     file_name + '_labelled_sagittal.png']
-  detected_images = [file_name + '_detected_axial.png',
-                     file_name + '_detected_coronal.png',
-                     file_name + '_detected_sagittal.png']
-  experiment_images = [file_name + '_experiment_axial.png',
-                     file_name + '_experiment_coronal.png',
-                     file_name + '_experiment_sagittal.png']
-  case_info = r'<b>Case nunmber</b>:{0} : {1} ,   '.format(idx, file_name)
-  document_text = AddDocumentText(document_text, case_info)
-  document_text += "\n"
-  document_text = AddDocumentText(document_text, "<table border=1><tr>")
-  document_text = AddThreeImages(document_text, image_link_template, image_folder, labelled_images, width)
-  if usage_flag >= 2:
-    document_text = AddThreeImages(document_text, image_link_template, image_folder, detected_images, width)
-  if usage_flag == 3:
-    document_text = AddThreeImages(document_text, image_link_template, image_folder, experiment_images, width)
-  document_text += "\n"
-  document_text = AddDocumentText(document_text, r'</tr></table>')
-  return document_text
-
-
-"""
-Generate a line of html text contents for labelled cases, in the usage of label checking.
-"""
-def GenHtmlRowForLabelChecking(image_link_template, error_info_template, document_text, truly_positive_files,
-                idx, point_dicts, image_folder, width):
-  file_name = truly_positive_files[idx]
-  labelled_point = list(point_dicts[0].values())[idx]
-  labelled_images = [file_name + '_labelled_axial.png',
-                     file_name + '_labelled_coronal.png',
-                     file_name + '_labelled_sagittal.png']
-
-  case_info = r'<b>Case nunmber</b>:{0} : {1} ,   '.format(idx, file_name)
-  error_info = error_info_template.format(labelled_point[0],
-                                          labelled_point[1],
-                                          labelled_point[2])
-  document_text = AddDocumentText(document_text, case_info)
-  document_text = AddDocumentText(document_text, error_info)
-  document_text += "\n"
-  document_text = AddDocumentText(document_text, "<table border=1><tr>")
-  document_text = AddThreeImages(document_text, image_link_template, image_folder, labelled_images, width)
-  document_text += "\n"
-  document_text = AddDocumentText(document_text, r'</tr></table>')
-
-  return document_text
-
-
-"""
-Generate a line of html text contents for truly positive files, in the usage of error analysis.
-"""
-def GenHtmlRowForErrorAnalysis(image_link_template, error_info_template, document_text, truly_positive_files,
-                               idx, point_dicts, image_folder, error_summary, width):
-  index = error_summary.sorted_index_list[idx]
-  file_name = truly_positive_files[index]
-
-  labelled_point = point_dicts[0][file_name]
-  detected_point = point_dicts[1][file_name]
-
-  labelled_images = [file_name + '_labelled_axial.png',
-                     file_name + '_labelled_coronal.png',
-                     file_name + '_labelled_sagittal.png']
-  detected_images = [file_name + '_detected_axial.png',
-                     file_name + '_detected_coronal.png',
-                     file_name + '_detected_sagittal.png']
-
-  x_error = error_summary.point_distance_list[index][0]
-  y_error = error_summary.point_distance_list[index][1]
-  z_error = error_summary.point_distance_list[index][2]
-  l2_error = error_summary.l2_norm_error_list[index]
-
-  error_info = error_info_template.format(labelled_point[0],
-                                          labelled_point[1],
-                                          labelled_point[2],
-                                          detected_point[0],
-                                          detected_point[1],
-                                          detected_point[2],
-                                          x_error,
-                                          y_error,
-                                          z_error,
-                                          l2_error)
-
-  case_info = r'<b>Case nunmber</b>:{0} : {1} ,   '.format(index, file_name)
-  document_text = AddDocumentText(document_text, case_info)
-  document_text = AddDocumentText(document_text, error_info)
-  document_text += "\n"
-  document_text = AddDocumentText(document_text, "<table border=1><tr>")
-  document_text = AddThreeImages(document_text, image_link_template, image_folder, labelled_images, width)
-  document_text = AddThreeImages(document_text, image_link_template, image_folder, detected_images, width)
-  document_text += "\n"
-  document_text = AddDocumentText(document_text, r'</tr></table>')
-  return document_text
-
-
-def gen_html_report(landmarks_list, usage_flag, output_folder):
+def gen_html_report(landmarks_list, landmark_names, usage_flag, output_folder):
   """
   Generate landmark evaluation HTML report.
   Input arguments:
@@ -326,83 +122,133 @@ def gen_html_report(landmarks_list, usage_flag, output_folder):
     html_report_name: The HTML report file name.
   """
   labelled_landmarks = landmarks_list[0]
-  labelled_landmarks_stat = get_landmarks_stat(labelled_landmarks)
 
   if usage_flag == 2:
     detected_landmarks = landmarks_list[1]
-    detected_landmarks_stat = get_landmarks_stat(detected_landmarks)
     assert len(labelled_landmarks.keys()) == len(detected_landmarks.keys())
 
-  image_list = list(labelled_landmarks.keys())
-  for landmark_name in labelled_landmarks[image_list[0]].keys():
-    print("Generating html report for landmark {}.".format(landmark_name))
+    # sort the labelled landmarks according to detection error
+    error_summary = error_analysis(labelled_landmarks, detected_landmarks)
+
+  landmark_name_list = labelled_landmarks[list(labelled_landmarks.keys())[0]].keys()
+  for landmark_idx in landmark_name_list:
+    print("Generating html report for landmark {}.".format(landmark_idx))
     image_link_template = r"<div class='content'><img border=0  src= '{0}'  hspace=1  width={1} class='pic'></div>"
     error_info_template = r'<b>Labelled</b>: [{0:.2f}, {1:.2f}, {2:.2f}];'
     document_text = r'"<h1>check predicted coordinates:</h1>"'
     document_text += "\n"
 
-    for image_idx, image_name in enumerate(image_list):
-      label_landmark_world = labelled_landmarks[image_name][landmark_name]
-      if usage_flag == 1:
-        document_text = gen_row_for_html(usage_flag, image_link_template, error_info_template, document_text, image_list,
-                                    image_idx, landmark_name, [label_landmark_world], picture_folder='./pictures', width=200)
-      elif usage_flag == 2:
-        detected_landmark_world = detected_landmarks[image_name][landmark_name]
+    if usage_flag == 1:
+      image_list = list(labelled_landmarks.keys())
+      for image_idx, image_name in enumerate(image_list):
+        label_landmark_world = labelled_landmarks[image_name][landmark_idx]
+        document_text = \
+          gen_row_for_html(usage_flag, image_link_template, error_info_template,
+                           document_text, image_list, image_idx, landmark_idx,
+                           [label_landmark_world], None)
+        
+    elif usage_flag == 2:
+      image_list = error_summary.all_cases[landmark_idx]
+      error_sorted_index = error_summary.error_sorted_index
+      for image_idx in error_sorted_index[landmark_idx]:
+        image_name = image_list[image_idx]
+        label_landmark_world = labelled_landmarks[image_name][landmark_idx]
+        detected_landmark_world = detected_landmarks[image_name][landmark_idx]
+        error_info_template = r'<b>Labelled</b>: [{0:.2f}, {1:.2f}, {2:.2f}];'
         error_info_template += r'<b>Detected</b>: [{3:.2f}, {4:.2f}, {5:.2f}];  '
-        error_info_template += r'<b>Error</b>: x:{6:.2f}; y:{7:.2f}; z:{8:.2f}; L2:{9:.2f}'
-        document_text = gen_row_for_html(usage_flag, image_link_template, error_info_template, document_text, image_list,
-                                    image_idx, landmark_name, [label_landmark_world, detected_landmark_world], picture_folder='./pictures', width=200)
+        error_info_template += r'<b>Type</b>: {6};'
+        error_info_template += r'<b>Error</b>: x:{7:.2f}; y:{8:.2f}; z:{9:.2f}; L2:{10:.2f};'
+        document_text = \
+          gen_row_for_html(usage_flag, image_link_template, error_info_template,
+                           document_text, image_list, image_idx, landmark_idx,
+                           [label_landmark_world, detected_landmark_world],
+                            error_summary)
 
-      else:
-        raise ValueError('Undefined usage flag!')
+    else:
+      raise ValueError('Undefined usage flag!')
 
     if usage_flag == 1:
-      analysis_text = gen_analysis_text(len(image_list), usage_flag, [labelled_landmarks_stat[landmark_name]])
+      analysis_text = gen_analysis_text(len(image_list), usage_flag,
+                                        labelled_landmarks, landmark_idx, landmark_names, None)
 
     elif usage_flag == 2:
       analysis_text = gen_analysis_text(len(image_list), usage_flag,
-        [labelled_landmarks_stat[landmark_name], detected_landmarks_stat[landmark_name]])
+                                        labelled_landmarks, landmark_idx, landmark_names, error_summary)
 
     else:
       raise ValueError('Undefined usage float!')
 
-    html_report_name = 'result_analysis.html'.format(landmark_name)
-    html_report_folder = os.path.join(output_folder, 'lm{}'.format(landmark_name))
+    html_report_name = 'result_analysis.html'.format(landmark_idx)
+    html_report_folder = os.path.join(output_folder, 'lm{}'.format(landmark_idx))
     if not os.path.isdir(html_report_folder):
       os.makedirs(html_report_folder)
     
     html_report_path = os.path.join(html_report_folder, html_report_name)
-    WriteToHtmlReportFile(document_text, analysis_text, html_report_path, width=200)
+    write_html_report_for_single_landmark(document_text, analysis_text, html_report_path, width=200)
+
+  if usage_flag == 2:
+    summary_csv_report_name = 'summary.csv'
+    summary_csv_path = os.path.join(output_folder, summary_csv_report_name)
+    write_summary_csv_report_for_all_landmarks(error_summary, summary_csv_path, landmark_names)
 
 
-def gen_analysis_text(num_data, usage_flag, landmarks):
+def gen_analysis_text(num_data, usage_flag, labelled_landmark, landmark_idx, landmark_names, error_summary):
   """
   Generate error analysis text for the html report.
   """
-  analysis_text = "There are {0} cases in total, ".format(num_data)
-  analysis_text += "\n"
-
-  labelled_landmarks = landmarks[0]
-  analysis_text += r'<p style="color:blue;">{0} cases do not contain this landmark: {1}</p>'.format(
-    len(labelled_landmarks['neg']), labelled_landmarks['neg'])
-  analysis_text += "<p> </p>"
+  analysis_text = r'<p style="color:red;">Basic information:</p>'
+  analysis_text += '<p style="color:black;">Landmark name: {0}.</p>'.format(landmark_names[landmark_idx])
+  analysis_text += '<p style="color:black;"># cases in total: {0}.</p>'.format(num_data)
+  labelled_landmarks_stat = get_landmarks_stat(labelled_landmark)
+  
+  analysis_text += r'<p style="color:black;"># cases having this landmark (Pos. cases): {0}.</p>'.format(
+    len(labelled_landmarks_stat[landmark_idx]['pos']))
+  analysis_text += r'<p style="color:black;"># cases missing this landmark (Neg. cases): {}.</p>'.format(
+    len(labelled_landmarks_stat[landmark_idx]['neg']))
+  if len(labelled_landmarks_stat[landmark_idx]['neg']) > 0:
+    missing_cases = copy.deepcopy(labelled_landmarks_stat[landmark_idx]['neg'])
+    missing_cases.sort()
+    analysis_text += r'{}'.format(missing_cases)
 
   if usage_flag == 2:
-    detected_landmarks = landmarks[1]
-    TP_cases = set(detected_landmarks['pos']) & set(labelled_landmarks['pos'])
-    TN_cases = set(detected_landmarks['neg']) & set(labelled_landmarks['neg'])
-    FP_cases = set(detected_landmarks['pos']) & set(labelled_landmarks['neg'])
-    FN_cases = set(detected_landmarks['neg']) & set(labelled_landmarks['pos'])
-    analysis_text += r'<p style="color:blue;">TP (TPR): {0} ({1})</p>'.format(len(TP_cases), len(TP_cases) / num_data)
-    analysis_text += r'<p style="color:blue;">TN (TNR): {0} ({1})</p>'.format(len(TN_cases), len(TN_cases) / num_data)
-    analysis_text += r'<p style="color:blue;">FP (FPR): {0} ({1})</p>'.format(len(FP_cases), len(FP_cases) / num_data)
-    analysis_text += r'<p style="color:blue;">FN (FNR): {0} ({1})</p>'.format(len(FN_cases), len(FN_cases) / num_data)
+    tp_cases = error_summary.tp_cases[landmark_idx]
+    tn_cases = error_summary.tn_cases[landmark_idx]
+    fp_cases = error_summary.fp_cases[landmark_idx]
+    fn_cases = error_summary.fn_cases[landmark_idx]
+    num_pos_cases = len(tp_cases) + len(fn_cases)
+    num_neg_cases = len(tn_cases) + len(fp_cases)
+    # compute TPR, TNR, FPR, FNR
+    TPR = len(tp_cases) / max(1, num_pos_cases) * 100 \
+      if len(tp_cases) != 0 or num_pos_cases != 0 else 100
+    TNR = len(tn_cases) / max(1, num_neg_cases) * 100 \
+      if len(tn_cases) != 0 or num_neg_cases != 0 else 100
+    FPR = 100 - TNR
+    FNR = 100 - TPR
+    mean_error = error_summary.mean_error_tp[landmark_idx]
+    std_error = error_summary.std_error_tp[landmark_idx]
+    median_error = error_summary.median_error_tp[landmark_idx]
+    max_error = error_summary.max_error_tp[landmark_idx]
+    analysis_text += r'<p style="color:red;"> Landmark classification error: </p>'
+    analysis_text += r'<p style="color:black;">TP (TPR): {0} ({1:.2f}%)</p>'.format(
+      len(tp_cases), TPR)
+    analysis_text += r'<p style="color:black;">TN (TNR): {0} ({1:.2f}%)</p>'.format(
+      len(tn_cases), TNR)
+    analysis_text += r'<p style="color:black;">FP (FPR): {0} ({1:.2f}%)</p>'.format(
+      len(fp_cases), FPR)
+    analysis_text += r'<p style="color:black;">FN (FNR): {0} ({1:.2f}%)</p>'.format(
+      len(fn_cases), FNR)
+    analysis_text += r'<p style="color:red;"> Landmark distance error for the {} TP cases (unit: mm): </p>'.format(
+      len(tp_cases))
+    analysis_text += r'<p style="color:black;">mean (std): {0:.2f} ({1:.2f})</p>'.format(
+      mean_error, std_error)
+    analysis_text += r'<p style="color:black;">median: {0:.2f}</p>'.format(median_error)
+    analysis_text += r'<p style="color:black;">max: {0:.2f}</p>'.format(max_error)
 
   return analysis_text
 
 
 def gen_row_for_html(usage_flag, image_link_template, error_info_template, document_text, image_list,
-                 image_idx, landmark_name, landmark_worlds, picture_folder, width):
+                 image_idx, landmark_name, landmark_worlds, error_summary, picture_folder='./pictures', width=200):
   """
   Generate a line of html text contents for labelled cases, in the usage of label checking.
   """
@@ -426,18 +272,19 @@ def gen_row_for_html(usage_flag, image_link_template, error_info_template, docum
                        image_basename + '_detection_lm{}_sagittal.png'.format(landmark_name)]
     detected_point = landmark_worlds[1]
 
-    x_error = detected_point[0] - labelled_point[0]
-    y_error = detected_point[1] - labelled_point[1]
-    z_error = detected_point[2] - labelled_point[2]
-    l2_error = np.linalg.norm(
-      np.array(labelled_point) - np.array(detected_point))
-  
+    assert error_summary is not None
+    x_error = error_summary.error_dx[landmark_name][image_idx]
+    y_error = error_summary.error_dy[landmark_name][image_idx]
+    z_error = error_summary.error_dz[landmark_name][image_idx]
+    l2_error = error_summary.error_l2[landmark_name][image_idx]
+    type_error = error_summary.error_type[landmark_name][image_idx]
     error_info = error_info_template.format(labelled_point[0],
                                             labelled_point[1],
                                             labelled_point[2],
                                             detected_point[0],
                                             detected_point[1],
                                             detected_point[2],
+                                            type_error,
                                             x_error,
                                             y_error,
                                             z_error,
@@ -445,15 +292,15 @@ def gen_row_for_html(usage_flag, image_link_template, error_info_template, docum
   else:
     raise ValueError('Unsupported flag type!')
 
-  document_text = AddDocumentText(document_text, case_info)
-  document_text = AddDocumentText(document_text, error_info)
+  document_text = add_document_text(document_text, case_info)
+  document_text = add_document_text(document_text, error_info)
   
   document_text += "\n"
-  document_text = AddDocumentText(document_text, "<table border=1><tr>")
-  document_text = AddThreeImages(document_text, image_link_template, picture_folder, labelled_images, width)
+  document_text = add_document_text(document_text, "<table border=1><tr>")
+  document_text = add_three_images(document_text, image_link_template, picture_folder, labelled_images, width)
   if usage_flag == 2:
-    document_text = AddThreeImages(document_text, image_link_template, picture_folder, detected_images, width)
+    document_text = add_three_images(document_text, image_link_template, picture_folder, detected_images, width)
   document_text += "\n"
-  document_text = AddDocumentText(document_text, r'</tr></table>')
+  document_text = add_document_text(document_text, r'</tr></table>')
 
   return document_text

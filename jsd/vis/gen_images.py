@@ -128,7 +128,7 @@ def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
     print("Generate plane images for {}.".format(image_name))
     assert len(landmarks[image_name].keys()) > 0
     
-    src_image = sitk.ReadImage(os.path.join(image_folder, image_name))
+    src_image = sitk.ReadImage(os.path.join(image_folder, image_name, 'org.mha'))
     src_size, src_spacing = src_image.GetSize(), src_image.GetSpacing()
     src_image_npy = sitk.GetArrayFromImage(src_image)
     src_image_npy = np.asarray(src_image_npy.astype(np.int16), dtype=np.int16).transpose([2, 1, 0])

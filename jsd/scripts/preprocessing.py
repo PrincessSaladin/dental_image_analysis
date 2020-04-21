@@ -58,9 +58,36 @@ def rename_landmark_files():
       os.remove(output_landmark_file_temp)
 
 
+def add_landmark_name():
+  landmark_file_folder = '/mnt/projects/CT_Dental/landmark'
+  landmark_name_file = '/mnt/projects/CT_Dental/landmark/landmark_name.csv'
+
+  landmark_name_df = pd.read_csv(landmark_name_file)
+  landmark_name_dict = {}
+  for idx, row in landmark_name_df.iterrows():
+    landmark_name_dict[row['landmark_idx']] = row['landmark_name']
+
+  landmark_file_output_folder = '/mnt/projects/CT_Dental/landmark_debug'
+  if not os.path.isdir(landmark_file_output_folder):
+    os.makedirs(landmark_file_output_folder)
+
+  landmark_files = os.listdir(landmark_file_folder)
+  for landmark_file in landmark_files:
+    if landmark_file.startswith('case'):
+      content = []
+      df = pd.read_csv(os.path.join(landmark_file_folder, landmark_file))
+      for idx, row in df.iterrows():
+        content.append([landmark_name_dict[idx + 1], row['x'], row['y'], row['z']])
+      df_out = pd.DataFrame(data=content, columns=['name', 'x', 'y', 'z'])
+      df_out.to_csv(os.path.join(landmark_file_output_folder, landmark_file), index=False)
+
+
 if __name__ == '__main__':
   
-  steps = [1]
+  steps = [2]
   
   if 1 in steps:
     rename_landmark_files()
+
+  if 2 in steps:
+    add_landmark_name()
