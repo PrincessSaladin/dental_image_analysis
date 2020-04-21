@@ -1,288 +1,316 @@
-from __future__ import print_function
 import argparse
+import glob
 import importlib
-import os
-import shutil
-import time
-
 import numpy as np
-import torch
 import torch.nn as nn
-import torch.optim as optim
+import os
+import pandas as pd
+import SimpleITK as sitk
+import time
+import torch
+from easydict import EasyDict as edict
 
-from md_detection3d.dataset.landmark.landmark_detection_dataset import LandmarkDetectionDataset
-from md_detection3d.dataset.landmark.landmark_detection_dataset import read_image_list
-from md_detection3d.dataset.landmark.landmark_detection_dataset import read_label_list
-from md.mdpytorch.loss.focal_loss import FocalLoss
-from md.mdpytorch.utils.train_tools import EpochConcateSampler
-from md.utils.python.plotly_tools import plot_loss
-from torch.autograd import Variable
-from torch.backends import cudnn
-from torch.utils.data import DataLoader
-from md_detection3d.utils.vdnet_helpers import LoadConfig
-from md_detection3d.utils.vdnet_helpers import LoadCheckpoint
-from md_detection3d.utils.vdnet_helpers import SaveCheckpoint
-from md_detection3d.utils.vdnet_helpers import SetupTrainLogger
-
-def ParseAndCheckArguments():
-  parser = argparse.ArgumentParser()
-
-  default_config = os.path.join(os.getcwd(), 'config',
-                                'mi_aorta_detection_config.py')
-
-  print("default config = {0}".format(default_config))
-
-  parser.add_argument('--config', type=str, default = default_config,
-                      help='Folder containing the detection training config file.')
-
-  args = parser.parse_args()
-
-  invalid_arguments = False
-  if not args.config:
-    print("Please specify the configuration file.")
-    invalid_arguments = True
-  elif not os.path.isfile(args.config):
-    print("The specified config: {0} does not exist!".format(args.config))
-    invalid_arguments = True
-
-  if invalid_arguments:
-    raise ValueError("Invalid input arguments!")
-
-  return args
-
-def Train(config_file):
-  cfg = LoadConfig(config_file)
-
-  # convert to absolute path since cfg use relative path
-  cfg.general.label_dir = os.path.join(cfg.general.root_dir, cfg.general.label_dir)
-  assert os.path.isdir(cfg.general.label_dir)
-
-  cfg.general.image_dir = os.path.join(cfg.general.root_dir, cfg.general.image_dir)
-  assert os.path.isdir(cfg.general.image_dir)
-
-  cfg.general.save_dir = os.path.join(cfg.general.root_dir, cfg.general.save_dir)
-  if not os.path.isdir(cfg.general.save_dir):
-    os.makedirs(cfg.general.save_dir)
-
-  # copy config file
-  config_file_to_save = os.path.join(cfg.general.save_dir, "config.py")
-  if config_file != config_file_to_save:
-    shutil.copy(config_file, os.path.join(cfg.general.save_dir, "config.py"))
-
-  # control randomness during training
-  np.random.seed(cfg.general.seed)
-  torch.manual_seed(cfg.general.seed)
-  torch.cuda.manual_seed(cfg.general.seed)
-
-  # clean up the existing folder if not resume training
-  if not cfg.general.resume_epoch:
-    shutil.rmtree(cfg.general.save_dir)
-
-  # enable logging
-  log_file = os.path.join(cfg.general.save_dir, 'logging', 'train_log.txt')
-  logger = SetupTrainLogger(log_file)
-
-  # enable cudnn
-  cudnn.benchmark = True
-  if not torch.cuda.is_available():
-    raise EnvironmentError('CUDA is not available! Please check nvidia driver!')
-
-  # create dataset and dataloader
-  label_list = read_label_list(cfg.general.label_dir,
-                               cfg.general.label_list_files)
-  image_list = read_image_list(cfg.general.label_dir,
-                               cfg.general.image_list_file)
-
-  run_regression = cfg.loss.regression.lamda > 0
-
-  dataset = LandmarkDetectionDataset(
-    cfg.general.image_dir,
-    image_list,
-    label_list,
-    cfg.dataset.voxel_spacing,
-    cfg.dataset.cropping_size,
-    cfg.dataset.sampling_size,
-    cfg.dataset.positive_upper_bound,
-    cfg.dataset.negative_lower_bound,
-    cfg.dataset.num_pos_patches_per_image,
-    cfg.dataset.neg_to_pos_patches_ratio,
-    cfg.dataset.augmentation.on,
-    cfg.dataset.augmentation.orientation_axis,
-    cfg.dataset.augmentation.orientation_radian,
-    cfg.dataset.normalization.mean,
-    cfg.dataset.normalization.stddev,
-    cfg.dataset.normalization.clip,
-    run_regression)
-
-  sampler = EpochConcateSampler(dataset, cfg.train.num_epochs)
-
-  dataloader = DataLoader(
-    dataset,
-    batch_size=cfg.train.batch_size,
-    sampler=sampler,
-    num_workers=cfg.train.num_threads,
-    pin_memory=True,
-    shuffle=False)
-
-  # define network
-  net_module = importlib.import_module('md_detection3d.network.' + cfg.net.name)
-  net_file, _ = os.path.splitext(net_module.__file__)
-  net_file += ".py"
-  shutil.copy(net_file, os.path.join(cfg.general.save_dir, "net.py"))
+from segmentation3d.utils.file_io import load_config, readlines
+from segmentation3d.utils.model_io import get_checkpoint_folder
+from segmentation3d.dataloader.image_tools import convert_image_to_tensor, convert_tensor_to_image, \
+    image_partition_by_fixed_size, resample_spacing, crop_image, pick_largest_connected_component
+from segmentation3d.utils.normalizer import FixedNormalizer, AdaptiveNormalizer
+from jsd.utils.landmark_utils import is_voxel_coordinate_valid, \
+    is_world_coordinate_valid
+from detection.dataloader.dataset import read_image_list
+from detection.utils.image_tools import weighted_voxel_center
 
 
-  in_channels = 1
-  num_classes = dataset.num_classes
+def read_test_folder(folder_path):
+    """ read single-modality input folder
+    :param folder_path: image file folder path
+    :return: a list of image path list, list of image case names
+    """
+    suffix = ['.mhd', '.nii', '.hdr', '.nii.gz', '.mha', '.image3d']
+    file = []
+    for suf in suffix:
+        file += glob.glob(os.path.join(folder_path, '*' + suf))
 
-  net = net_module.VNet(in_channels, num_classes, run_regression)
-  net_module.ApplyKaimingInit(net)
-  max_stride = net.max_stride()
+    file_name_list, file_path_list = [], []
+    for im_pth in sorted(file):
+        _, im_name = os.path.split(im_pth)
+        for suf in suffix:
+            idx = im_name.find(suf)
+            if idx != -1:
+                im_name = im_name[:idx]
+                break
+        file_name_list.append(im_name)
+        file_path_list.append(im_pth)
 
-  gpu_ids = list(range(cfg.general.num_gpus))
-  net = nn.parallel.DataParallel(net, device_ids = gpu_ids)
-  net = net.cuda()
-
-  if (cfg.dataset.cropping_size[0] % max_stride != 0) \
-          or (cfg.dataset.cropping_size[1] % max_stride != 0) \
-          or (cfg.dataset.cropping_size[2] % max_stride != 0):
-    raise ValueError('cropping size not divisible by max_stride')
-
-  # create optimizer.
-  optimizer = optim.Adam(net.parameters(), lr=cfg.train.lr, betas=cfg.train.betas)
-
-  # load checkpoint if resume epoch = True
-  checkpoint_dir = os.path.join(cfg.general.save_dir, 'checkpoints')
-  if not os.path.isdir(checkpoint_dir):
-    os.makedirs(checkpoint_dir)
-
-  if cfg.general.resume_epoch:
-    batch_start = LoadCheckpoint(checkpoint_dir, net, optimizer)
-  else:
-    batch_start = 0
-
-  # training buffer
-  input_size = cfg.dataset.cropping_size
-  dim_x = input_size[0]
-  dim_y = input_size[1]
-  dim_z = input_size[2]
-
-  num_patches_per_image = cfg.dataset.num_pos_patches_per_image * (
-    1 + cfg.dataset.neg_to_pos_patches_ratio)
-  num_patches_per_batch = num_patches_per_image * cfg.train.batch_size
-  num_input_channels = 1
-  num_target_channels = 1
-  num_output_channels = dataset.num_classes
-  if (cfg.loss.regression.lamda > 0):
-    num_target_channels = 4
-    num_output_channels += 3 * (dataset.num_classes - 1)
-
-  input = torch.FloatTensor(
-    num_patches_per_batch,
-    num_input_channels,
-    dim_z,
-    dim_y,
-    dim_x)
-
-  target = torch.FloatTensor(
-    num_patches_per_batch,
-    num_target_channels,
-    dim_z,
-    dim_y,
-    dim_x)
-
-  input = input.cuda()
-  target = target.cuda()
-  batch_idx = batch_start
-
-  # define loss function
-  if cfg.loss.classification.name == 'Focal':
-    alpha = [None] * dataset.num_classes
-    alpha[0] = 1 - cfg.loss.classification.focal_obj_alpha
-    for i in range(1, num_classes):
-      alpha[i] = cfg.loss.classification.focal_obj_alpha
-
-    gamma = cfg.loss.classification.focal_gamma
-    loss_func = FocalLoss(class_num=dataset.num_classes, alpha=alpha, gamma=gamma)
-  else:
-    raise ValueError('Unsupported loss function.')
-
-  data_iter = iter(dataloader)
-  for i in range(len(dataloader)):
-    begin_t = time.time()
-    crops, masks, _, _ = next(data_iter)
-    crops = crops.view(-1, num_input_channels, dim_z, dim_y, dim_x)
-    masks = masks.view(-1, num_target_channels, dim_z, dim_y, dim_x)
-
-    input.resize_(crops.size())
-    input.copy_(crops)
-
-    target.resize_(masks.size())
-    target.copy_(masks)
-
-    # clear previous gradients
-    optimizer.zero_grad()
-
-    # network forward
-    input_v = Variable(input)
-    predictions = net(input_v)
-
-    # both 'predictions' and 'targets' are of shape
-    # [batch * patch, channels, dim_z, dim_y, dim_x]
-    predictions = predictions.permute(0, 2, 3, 4, 1).contiguous()
-    target = target.permute(0, 2, 3, 4, 1).contiguous()
-
-    # reshape 'predictions' and 'targets' to [samples, channels]
-    predictions = predictions.view(-1, num_output_channels)
-    target = target.view(-1, num_target_channels)
-
-    # only select those samples whose label is not -1.
-    selected_sample_indices = torch.nonzero(target[:,0] != -1).squeeze()
-    target = torch.index_select(target, 0, selected_sample_indices)
-    selected_sample_indices_v = Variable(selected_sample_indices, requires_grad=False)
-    predictions = torch.index_select(predictions, 0, selected_sample_indices_v)
-
-    # compute training loss (ignore the regression loss)
-    target_v = Variable(target, requires_grad=False)
-    train_loss = loss_func(predictions[:, 0:num_classes], target_v[:, 0])
-
-    _, predicted_labels = torch.max(predictions[:,0:num_classes].data, 1)
-    ground_truth_labels = target_v[:,0].data
-    train_error = float(torch.sum(predicted_labels.int() != ground_truth_labels.int())) \
-                  / predicted_labels.size()[0]
-
-    # backward propagation
-    train_loss.backward()
-
-    # update weights
-    optimizer.step()
-
-    batch_duration = time.time() - begin_t
-    sample_duration = batch_duration * 1.0 / cfg.train.batch_size
-
-    # approximate epoch_idx because len(dataset) is not necessarily divisible
-    # by cfg.train.batch_size.
-    epoch_idx = batch_idx * cfg.train.batch_size // len(dataset)
-    # print loss per batch
-    if cfg.loss.classification.name == 'Focal':
-      msg = 'epoch: {}, batch: {}, floss: {:.4f}, error: {:.4f}, time: {:.4f} s/vol'
-      msg = msg.format(epoch_idx, batch_idx, train_loss,
-                        train_error, sample_duration)
-    logger.info(msg)
-
-    if batch_idx % cfg.train.plot_snapshot == 0:
-      if cfg.loss.classification.name == 'Focal':
-        floss_plot_file = os.path.join(cfg.general.save_dir, 'floss.html')
-        plot_loss(log_file, floss_plot_file, name='floss', display='Focal loss')
-
-    if epoch_idx % cfg.train.save_epochs == 0:
-      SaveCheckpoint(checkpoint_dir, net, optimizer, epoch_idx, batch_idx)
+    return file_name_list, file_path_list
 
 
-    batch_idx += 1
+def load_seg_model(model_folder, gpu_id=0):
+    """ load segmentation model from folder
+    :param model_folder:    the folder containing the segmentation model
+    :param gpu_id:          the gpu device id to run the segmentation model
+    :return: a dictionary containing the model and inference parameters
+    """
+    assert os.path.isdir(model_folder), 'Model folder does not exist: {}'.format(
+        model_folder)
+
+    # load inference config file
+    latest_checkpoint_dir = get_checkpoint_folder(
+        os.path.join(model_folder, 'checkpoints'), -1)
+    infer_cfg = load_config(
+        os.path.join(latest_checkpoint_dir, 'infer_config.py'))
+
+    model = edict()
+    model.infer_cfg = infer_cfg
+    train_cfg = load_config(
+        os.path.join(latest_checkpoint_dir, 'train_config.py'))
+    model.train_cfg = train_cfg
+
+    # load model state
+    chk_file = os.path.join(latest_checkpoint_dir, 'params.pth')
+
+    if gpu_id >= 0:
+        os.environ['CUDA_VISIBLE_DEVICES'] = '{}'.format(int(gpu_id))
+        # load network module
+        state = torch.load(chk_file)
+        net_module = importlib.import_module(
+            'detection.network.' + state['net'])
+        net = net_module.Net(state['in_channels'], state['num_landmark_classes:'] + 1)
+        net = nn.parallel.DataParallel(net, device_ids=[0])
+        net.load_state_dict(state['state_dict'])
+        net.eval()
+        net = net.cuda()
+        del os.environ['CUDA_VISIBLE_DEVICES']
+
+    else:
+        state = torch.load(chk_file, map_location='cpu')
+        net_module = importlib.import_module(
+            'detection.network.' + state['net'])
+        net = net_module.Net(state['in_channels'], state['num_landmark_classes:'] + 1)
+        net.load_state_dict(state['state_dict'])
+        net.eval()
+
+    model.net = net
+    model.crop_size, model.crop_spacing, model.max_stride, model.interpolation = \
+        state['crop_size'], state['crop_spacing'], state['max_stride'], state['interpolation']
+    model.in_channels, model.num_organ_classes, model.num_landmark_classes = \
+        state['in_channels'], state['num_organ_classes'], state['num_landmark_classes:']
+
+    model.crop_normalizers = []
+    for crop_normalizer in state['crop_normalizers']:
+        if crop_normalizer['type'] == 0:
+            mean, stddev, clip = crop_normalizer['mean'], crop_normalizer['stddev'], \
+                                 crop_normalizer['clip']
+            model.crop_normalizers.append(FixedNormalizer(mean, stddev, clip))
+
+        elif crop_normalizer['type'] == 1:
+            clip_sigma = crop_normalizer['clip_sigma']
+            model.crop_normalizers.append(AdaptiveNormalizer(clip_sigma))
+
+        else:
+            raise ValueError('Unsupported normalization type.')
+
+    return model
+
+
+def segmentation_voi(model, iso_image, start_voxel, end_voxel, use_gpu):
+    """ Segment the volume of interest
+    :param model:           the loaded segmentation model.
+    :param iso_image:       the image volume that has the same spacing with the model's resampling spacing.
+    :param start_voxel:     the start voxel of the volume of interest (inclusive).
+    :param end_voxel:       the end voxel of the volume of interest (exclusive).
+    :param use_gpu:         whether to use gpu or not, bool type.
+    :return:
+      mean_prob_maps:        the mean probability maps of all classes
+      std_maps:              the standard deviation maps of all classes
+    """
+    assert isinstance(iso_image, sitk.Image)
+
+    roi_image = iso_image[start_voxel[0]:end_voxel[0],
+                start_voxel[1]:end_voxel[1], start_voxel[2]:end_voxel[2]]
+
+    if model['crop_normalizers'] is not None:
+        roi_image = model.crop_normalizers[0](roi_image)
+
+    roi_image_tensor = convert_image_to_tensor(roi_image).unsqueeze(0)
+    if use_gpu:
+        roi_image_tensor = roi_image_tensor.cuda()
+
+    with torch.no_grad():
+        landmarks_pred = model['net'](roi_image_tensor)
+
+    return landmarks_pred
+
+
+def segmentation(input_path, model_folder, output_folder, gpu_id):
+    """ volumetric image segmentation engine
+    :param input_path:          The path of text file, a single image file or a root dir with all image files
+    :param model_folder:        The path of trained model
+    :param output_folder:       The path of out folder
+    :param gpu_id:              Which gpu to use, by default, 0
+    :return: None
+    """
+
+    # load model
+    begin = time.time()
+    model = load_seg_model(model_folder, gpu_id)
+    load_model_time = time.time() - begin
+
+    # load landmark label dictionary
+    landmark_dict = model['train_cfg'].general.target_landmark_label
+    landmark_name_list, landmark_label_list = [], []
+    for landmark_name in landmark_dict.keys():
+        landmark_name_list.append(landmark_name)
+        landmark_label_list.append(landmark_dict[landmark_name])
+    landmark_label_reorder = np.argsort(landmark_label_list)
+
+    # load test images
+    if os.path.isfile(input_path):
+        if input_path.endswith('.csv'):
+            file_name_list, file_path_list = read_image_list(input_path, 'test')
+        else:
+            if input_path.endswith('.mhd') or input_path.endswith('.mha') or \
+                    input_path.endswith('.nii.gz') or input_path.endswith('.nii') or \
+                    input_path.endswith('.hdr') or input_path.endswith('.image3d'):
+                im_name = os.path.basename(input_path)
+                file_name_list = [im_name]
+                file_path_list = [input_path]
+
+            else:
+                raise ValueError('Unsupported input path.')
+
+    elif os.path.isdir(input_path):
+        file_name_list, file_path_list = read_test_folder(input_path)
+
+    else:
+        raise ValueError('Unsupported input path.')
+
+    if not os.path.isdir(output_folder):
+        os.makedirs(output_folder)
+
+    # test each case
+    for i, file_path in enumerate(file_path_list):
+        print('{}: {}'.format(i, file_path))
+
+        # load image
+        begin = time.time()
+        image = sitk.ReadImage(file_path, sitk.sitkFloat32)
+        read_image_time = time.time() - begin
+
+        iso_image = resample_spacing(image, model['crop_spacing'], model['max_stride'],
+                                     model['interpolation'])
+        assert isinstance(iso_image, sitk.Image)
+
+        # need to delete when inferring on the server
+        iso_center = iso_image.TransformIndexToPhysicalPoint([iso_image.GetSize()[idx] // 2 for idx in range(3)])
+        iso_image = crop_image(iso_image, iso_center, model['crop_size'],
+                               model['crop_spacing'], model['interpolation'])
+
+        partition_type = model['infer_cfg'].general.partition_type
+        partition_stride = model['infer_cfg'].general.partition_stride
+        if partition_type == 'DISABLE':
+            start_voxels = [[0, 0, 0]]
+            end_voxels = [[int(iso_image.GetSize()[idx]) for idx in range(3)]]
+
+        elif partition_type == 'SIZE':
+            partition_size = model['infer_cfg'].general.partition_size
+            max_stride = model['max_stride']
+            start_voxels, end_voxels = \
+                image_partition_by_fixed_size(iso_image, partition_size,
+                                              partition_stride, max_stride)
+
+        else:
+            raise ValueError('Unsupported partition type!')
+
+        begin = time.time()
+        voi_landmark_mask_preds = []
+        for idx in range(len(start_voxels)):
+            start_voxel, end_voxel = start_voxels[idx], end_voxels[idx]
+
+            voi_landmarks_pred = \
+                segmentation_voi(model, iso_image, start_voxel, end_voxel, gpu_id > 0)
+
+            voi_landmark_mask_preds.append(voi_landmarks_pred)
+            print('{:0.2f}%'.format((idx + 1) / len(start_voxels) * 100))
+
+        # convert to landmark masks
+        landmark_mask_preds = voi_landmark_mask_preds[0].cpu()
+        assert landmark_mask_preds.shape[0] == 1
+        landmark_mask_preds = torch.squeeze(landmark_mask_preds)
+        landmark_mask_preds = convert_tensor_to_image(landmark_mask_preds, sitk.sitkFloat32)
+        inference_time = time.time() - begin
+
+        begin = time.time()
+        detected_landmark = []
+        for j in range(0, model['num_landmark_classes']):
+          landmark_mask_pred = landmark_mask_preds[j + 1] # exclude the background
+          landmark_mask_pred.CopyInformation(iso_image)
+
+          landmark_mask_prob = sitk.GetArrayFromImage(landmark_mask_pred)
+          # threshold the probability map to get the binary mask
+          prob_threshold = 0.5
+          landmark_mask_binary = np.zeros_like(landmark_mask_prob, dtype=np.int16)
+          landmark_mask_binary[landmark_mask_prob >= prob_threshold] = 1
+          landmark_mask_binary[landmark_mask_prob < prob_threshold] = 0
+
+          # pick the largest connected component
+          landmark_mask_cc = sitk.GetImageFromArray(landmark_mask_binary)
+          landmark_mask_cc = pick_largest_connected_component(landmark_mask_cc, [j])
+
+          # only keep probability of the largest connected component
+          landmark_mask_cc = sitk.GetArrayFromImage(landmark_mask_cc)
+          masked_landmark_mask_prob = np.multiply(landmark_mask_cc.astype(np.float), landmark_mask_prob)
+
+          # compute the weighted mass center of the probability map
+          masked_landmark_mask_prob = sitk.GetImageFromArray(masked_landmark_mask_prob)
+          masked_landmark_mask_prob.CopyInformation(iso_image)
+          voxel_coordinate = weighted_voxel_center(masked_landmark_mask_prob, prob_threshold, 1.0)
+
+          landmark_name = landmark_name_list[landmark_label_reorder[j]]
+          if voxel_coordinate is not None:
+            world_coordinate = masked_landmark_mask_prob.voxel_to_world(voxel_coordinate)
+            print("world coordinate of volume {0} landmark {1} is:[{2},{3},{4}]".format(
+              file_name_list[i], i, world_coordinate[0], world_coordinate[1], world_coordinate[2]))
+            detected_landmark.append(
+                [landmark_name, world_coordinate[0], world_coordinate[1], world_coordinate[2]]
+            )
+          else:
+            detected_landmark.append([landmark_name, -1, -1, -1])
+
+        detected_landmark_df = pd.DataFrame(data=detected_landmark, columns=['name', 'x', 'y', 'z'])
+        detected_landmark_save_path = os.path.join(output_folder, '{}.csv'.format(file_name_list[i]))
+        detected_landmark_df.to_csv(detected_landmark_save_path, index=False)
+
+        saving_time = time.time() - begin
+        print('read: {:.2f} s, prediction: {:.2f} s, saving: {:.2f} s'.format(
+            read_image_time, inference_time, saving_time)
+        )
+
+def main():
+    long_description = 'Inference engine for 3d medical image segmentation \n' \
+                       'It supports multiple kinds of input:\n' \
+                       '1. Single image\n' \
+                       '2. A text file containing paths of all testing images\n' \
+                       '3. A folder containing all testing images\n'
+
+    default_input = '/mnt/projects/CT_Dental/dataset/landmark_detection/test_local.csv'
+    default_model = '/mnt/projects/CT_Dental/models/model_0419_2020'
+    default_output = '/mnt/projects/CT_Dental/results/model_0419_2020'
+    default_gpu_id = -1
+
+    parser = argparse.ArgumentParser(description=long_description)
+    parser.add_argument('-i', '--input', default=default_input,
+                        help='input folder/file for intensity images')
+    parser.add_argument('-m', '--model', default=default_model,
+                        help='model root folder')
+    parser.add_argument('-o', '--output', default=default_output,
+                        help='output folder for segmentation')
+    parser.add_argument('-g', '--gpu_id', type=int, default=default_gpu_id,
+                        help='the gpu id to run model, set to -1 if using cpu only.')
+
+    args = parser.parse_args()
+    segmentation(args.input, args.model, args.output, args.gpu_id)
 
 
 if __name__ == '__main__':
-    args = ParseAndCheckArguments()
-    Train(args.config)
-
-
+    main()
