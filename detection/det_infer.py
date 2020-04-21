@@ -10,13 +10,11 @@ import time
 import torch
 from easydict import EasyDict as edict
 
-from segmentation3d.utils.file_io import load_config, readlines
+from segmentation3d.utils.file_io import load_config
 from segmentation3d.utils.model_io import get_checkpoint_folder
 from segmentation3d.dataloader.image_tools import convert_image_to_tensor, convert_tensor_to_image, \
-    image_partition_by_fixed_size, resample_spacing, crop_image, pick_largest_connected_component
+    image_partition_by_fixed_size, resample_spacing, pick_largest_connected_component
 from segmentation3d.utils.normalizer import FixedNormalizer, AdaptiveNormalizer
-from jsd.utils.landmark_utils import is_voxel_coordinate_valid, \
-    is_world_coordinate_valid
 from detection.dataloader.dataset import read_image_list
 from detection.utils.image_tools import weighted_voxel_center
 
@@ -75,7 +73,7 @@ def load_seg_model(model_folder, gpu_id=0):
         state = torch.load(chk_file)
         net_module = importlib.import_module(
             'detection.network.' + state['net'])
-        net = net_module.Net(state['in_channels'], state['num_landmark_classes:'] + 1)
+        net = net_module.Net(state['in_channels'], state['num_landmark_classes'] + 1)
         net = nn.parallel.DataParallel(net, device_ids=[0])
         net.load_state_dict(state['state_dict'])
         net.eval()
@@ -86,7 +84,7 @@ def load_seg_model(model_folder, gpu_id=0):
         state = torch.load(chk_file, map_location='cpu')
         net_module = importlib.import_module(
             'detection.network.' + state['net'])
-        net = net_module.Net(state['in_channels'], state['num_landmark_classes:'] + 1)
+        net = net_module.Net(state['in_channels'], state['num_landmark_classes'] + 1)
         net.load_state_dict(state['state_dict'])
         net.eval()
 
@@ -94,7 +92,7 @@ def load_seg_model(model_folder, gpu_id=0):
     model.crop_size, model.crop_spacing, model.max_stride, model.interpolation = \
         state['crop_size'], state['crop_spacing'], state['max_stride'], state['interpolation']
     model.in_channels, model.num_organ_classes, model.num_landmark_classes = \
-        state['in_channels'], state['num_organ_classes'], state['num_landmark_classes:']
+        state['in_channels'], state['num_organ_classes'], state['num_landmark_classes']
 
     model.crop_normalizers = []
     for crop_normalizer in state['crop_normalizers']:
