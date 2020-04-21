@@ -9,13 +9,9 @@ cfg = __C
 ##################################
 __C.general = {}
 
-__C.general.training_image_list_file = '/mnt/projects/CT_Dental/dataset/landmark_detection/train.csv'
+__C.general.training_image_list_file = '/mnt/projects/CT_Dental/dataset/landmark_detection/train_local.csv'
 
 __C.general.validation_image_list_file = ''
-
-__C.general.landmark_mask_folder = '/mnt/projects/CT_Dental/landmark_mask_2mm'
-
-__C.general.landmark_files_folder = '/mnt/projects/CT_Dental/landmark'
 
 # landmark label starts from 1, 0 represents the background.
 __C.general.target_landmark_label = {
