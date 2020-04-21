@@ -98,8 +98,8 @@ class LandmarkDetectionDataset(Dataset):
       self.image_name_list, self.landmark_file_path, self.target_landmark_label
     )
     self.target_organ_label = target_organ_label
-    self.crop_spacing = crop_spacing
-    self.crop_size = crop_size
+    self.crop_spacing = np.array(crop_spacing, dtype=np.float32)
+    self.crop_size = np.array(crop_size, dtype=np.float32)
     self.sampling_method = sampling_method
     self.sampling_size = sampling_size
     self.positive_upper_bound = positive_upper_bound
@@ -234,6 +234,16 @@ class LandmarkDetectionDataset(Dataset):
 
     return selected_mask
 
+  def get_random_organ_label(self):
+    """
+    Get a random organ label
+    :return: Organ label
+    """
+    organ_name_list = list(self.target_organ_label.keys())
+    random_organ_name = organ_name_list[np.random.randint(0, len(organ_name_list))]
+    random_organ_label = self.target_organ_label[random_organ_name]
+    return random_organ_label
+
   def __getitem__(self, index):
     """ get a training sample - image(s) and segmentation pair
     :param index:  the sample index
@@ -263,10 +273,8 @@ class LandmarkDetectionDataset(Dataset):
       center = self.global_sample(organ_mask)
 
     elif self.sampling_method == 'MASK':
-      random_organ_index = np.random.randint(0, self.num_organ_classes - 1)
-      centers = select_random_voxels_in_multi_class_mask(
-        organ_mask, 1, self.target_organ_label[random_organ_index]
-      )
+      random_organ_label = self.get_random_organ_label()
+      centers = select_random_voxels_in_multi_class_mask(organ_mask, 1, random_organ_label)
       if len(centers) > 0:
         center = organ_mask.TransformIndexToPhysicalPoint([int(centers[0][idx]) for idx in range(3)])
       else:  # if no segmentation
@@ -276,10 +284,8 @@ class LandmarkDetectionDataset(Dataset):
       if index % 2:
         center = self.global_sample(organ_mask)
       else:
-        random_organ_index = np.random.randint(0, self.num_organ_classes - 1)
-        centers = select_random_voxels_in_multi_class_mask(
-          organ_mask, 1, self.target_organ_label[random_organ_index]
-        )
+        random_organ_label = self.get_random_organ_label()
+        centers = select_random_voxels_in_multi_class_mask(organ_mask, 1, random_organ_label)
         if len(centers) > 0:
           center = organ_mask.TransformIndexToPhysicalPoint([int(centers[0][idx]) for idx in range(3)])
         else:  # if no segmentation

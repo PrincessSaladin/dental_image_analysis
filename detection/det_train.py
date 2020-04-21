@@ -15,8 +15,9 @@ from segmentation3d.dataloader.sampler import EpochConcateSampler
 from segmentation3d.loss.focal_loss import FocalLoss
 from segmentation3d.loss.multi_dice_loss import MultiDiceLoss
 from segmentation3d.utils.file_io import load_config, setup_logger
-from segmentation3d.utils.model_io import load_checkpoint, save_checkpoint
+from segmentation3d.utils.model_io import load_checkpoint
 from detection.dataloader.dataset import LandmarkDetectionDataset
+from detection.utils.model_io import save_checkpoint
 
 
 def train(config_file):
@@ -32,7 +33,9 @@ def train(config_file):
     # clean the existing folder if training from scratch
     if os.path.isdir(cfg.general.save_dir):
         if cfg.general.resume_epoch < 0:
-            shutil.rmtree(cfg.general.save_dir)    
+            shutil.rmtree(cfg.general.save_dir)
+            os.makedirs(cfg.general.save_dir)
+            shutil.copy(config_file, os.path.join(cfg.general.save_dir, 'train_config.py'))
         else:
             shutil.copy(config_file, os.path.join(cfg.general.save_dir, 'train_config.py'))
     else:
