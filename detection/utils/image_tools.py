@@ -29,9 +29,9 @@ def weighted_voxel_center(image, threshold_min, threshold_max):
     for k in range(image_npy.shape[2]):
         image_npy_z[:, :, k] = k
 
-    weighted_center_x = np.multiply(image_npy, image_npy_x) / weight_sum
-    weighted_center_y = np.multiply(image_npy, image_npy_y) / weight_sum
-    weighted_center_z = np.multiply(image_npy, image_npy_z) / weight_sum
+    weighted_center_x = np.sum(np.multiply(image_npy, image_npy_x)) / weight_sum
+    weighted_center_y = np.sum(np.multiply(image_npy, image_npy_y)) / weight_sum
+    weighted_center_z = np.sum(np.multiply(image_npy, image_npy_z)) / weight_sum
     weighted_center = [weighted_center_z, weighted_center_y, weighted_center_x]
 
     return weighted_center
