@@ -142,7 +142,7 @@ def segmentation_voi(model, iso_image, start_voxel, end_voxel, use_gpu):
     return landmarks_pred
 
 
-def segmentation(input_path, model_folder, output_folder, gpu_id):
+def segmentation(input_path, model_folder, output_folder, gpu_id, save_prob):
     """ volumetric image segmentation engine
     :param input_path:          The path of text file, a single image file or a root dir with all image files
     :param model_folder:        The path of trained model
@@ -201,11 +201,6 @@ def segmentation(input_path, model_folder, output_folder, gpu_id):
                                      model['interpolation'])
         assert isinstance(iso_image, sitk.Image)
 
-        # need to delete when inferring on the server
-        iso_center = iso_image.TransformIndexToPhysicalPoint([iso_image.GetSize()[idx] // 2 for idx in range(3)])
-        iso_image = crop_image(iso_image, iso_center, model['crop_size'],
-                               model['crop_spacing'], model['interpolation'])
-
         partition_type = model['infer_cfg'].general.partition_type
         partition_stride = model['infer_cfg'].general.partition_stride
         if partition_type == 'DISABLE':
@@ -246,6 +241,10 @@ def segmentation(input_path, model_folder, output_folder, gpu_id):
           landmark_mask_pred = landmark_mask_preds[j + 1] # exclude the background
           landmark_mask_pred.CopyInformation(iso_image)
 
+          if save_prob:
+            prob_path = os.path.join(output_folder, '{}_{}.mha'.format(file_name_list[i], j))
+            sitk.WriteImage(landmark_mask_pred, prob_path)
+
           landmark_mask_prob = sitk.GetArrayFromImage(landmark_mask_pred)
           # threshold the probability map to get the binary mask
           prob_threshold = 0.5
@@ -255,7 +254,7 @@ def segmentation(input_path, model_folder, output_folder, gpu_id):
 
           # pick the largest connected component
           landmark_mask_cc = sitk.GetImageFromArray(landmark_mask_binary)
-          landmark_mask_cc = pick_largest_connected_component(landmark_mask_cc, [j])
+          landmark_mask_cc = pick_largest_connected_component(landmark_mask_cc, [1])
 
           # only keep probability of the largest connected component
           landmark_mask_cc = sitk.GetArrayFromImage(landmark_mask_cc)
@@ -297,6 +296,7 @@ def main():
     default_input = '/shenlab/lab_stor6/projects/CT_Dental/dataset/landmark_detection/train_server.csv'
     default_model = '/shenlab/lab_stor6/qinliu/projects/CT_Dental/models/model_0420_2020'
     default_output = '/shenlab/lab_stor6/qinliu/projects/CT_Dental/results/model_0420_2020'
+    default_save_prob = False
     default_gpu_id = 6
 
     parser = argparse.ArgumentParser(description=long_description)
@@ -308,9 +308,11 @@ def main():
                         help='output folder for segmentation')
     parser.add_argument('-g', '--gpu_id', type=int, default=default_gpu_id,
                         help='the gpu id to run model, set to -1 if using cpu only.')
+    parser.add_argument('-s', '--save_prob', type=bool, default=default_save_prob,
+                        help='Whether save the probability maps.')
 
     args = parser.parse_args()
-    segmentation(args.input, args.model, args.output, args.gpu_id)
+    segmentation(args.input, args.model, args.output, args.gpu_id, args.save_prob)
 
 
 if __name__ == '__main__':
