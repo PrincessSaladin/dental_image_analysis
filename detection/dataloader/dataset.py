@@ -225,14 +225,16 @@ class LandmarkDetectionDataset(Dataset):
         mask_npy[voxel_sp_z:voxel_ep_z, voxel_sp_y:voxel_ep_y, voxel_sp_x:voxel_ep_x]
 
     # reorder the landmark label
-    for idx in valid_landmark_idx:
+    reordered_selected_mask_npy = np.zeros_like(selected_mask_npy) - 1.0
+    reordered_selected_mask_npy[abs(selected_mask_npy) < 1e-1] = 0
+    for idx in range(len(landmark_df['label'])):
       label = landmark_df['label'][idx]
-      selected_mask_npy[abs(selected_mask_npy - label) < 1e-1] = idx
+      reordered_selected_mask_npy[abs(selected_mask_npy - label) < 1e-1] = idx + 1
 
-    selected_mask = sitk.GetImageFromArray(selected_mask_npy)
-    selected_mask.CopyInformation(landmark_mask)
+    reordered_selected_mask = sitk.GetImageFromArray(reordered_selected_mask_npy)
+    reordered_selected_mask.CopyInformation(landmark_mask)
 
-    return selected_mask
+    return reordered_selected_mask
 
   def get_random_organ_label(self):
     """
