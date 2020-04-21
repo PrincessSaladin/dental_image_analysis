@@ -254,7 +254,7 @@ def segmentation(input_path, model_folder, output_folder, gpu_id, save_prob):
 
           # pick the largest connected component
           landmark_mask_cc = sitk.GetImageFromArray(landmark_mask_binary)
-          landmark_mask_cc = pick_largest_connected_component(landmark_mask_cc, [j])
+          landmark_mask_cc = pick_largest_connected_component(landmark_mask_cc, [1])
 
           # only keep probability of the largest connected component
           landmark_mask_cc = sitk.GetArrayFromImage(landmark_mask_cc)
