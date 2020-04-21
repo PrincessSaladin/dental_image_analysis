@@ -9,7 +9,7 @@ cfg = __C
 ##################################
 __C.general = {}
 
-__C.general.training_image_list_file = '/mnt/projects/CT_Dental/dataset/landmark_detection/train_local.csv'
+__C.general.training_image_list_file = '/shenlab/lab_stor6/projects/CT_Dental/dataset/landmark_detection/train_server.csv'
 
 __C.general.validation_image_list_file = ''
 
@@ -36,11 +36,11 @@ __C.general.target_organ_label = {
     'mandible': 2
 }
 
-__C.general.save_dir = '/mnt/projects/CT_Dental/models/model_0419_2020'
+__C.general.save_dir = '/shenlab/lab_stor6/qinliu/projects/CT_Dental/models/model_0420_2020'
 
 __C.general.resume_epoch = -1
 
-__C.general.num_gpus = 0
+__C.general.num_gpus = 1
 
 ##################################
 # dataset parameters
@@ -136,4 +136,4 @@ __C.debug = {}
 __C.debug.seed = 0
 
 # whether to save input crops
-__C.debug.save_inputs = True
+__C.debug.save_inputs = False

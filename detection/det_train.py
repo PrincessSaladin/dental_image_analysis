@@ -169,7 +169,7 @@ def train(config_file):
 
 def main():
 
-    # os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
     long_description = "Training engine for 3d medical image landmark detection"
     parser = argparse.ArgumentParser(description=long_description)
