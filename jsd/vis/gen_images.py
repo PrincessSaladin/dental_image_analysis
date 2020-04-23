@@ -54,8 +54,9 @@ def load_coordinates_from_csv(csv_file):
   landmarks = OrderedDict()
   df = pd.read_csv(csv_file)
   for idx in range(len(df)):
-    landmark = df.loc[idx]
-    landmarks.update({idx: [landmark[0], landmark[1], landmark[2]]})
+    landmark_name = df['name'][idx]
+    x, y, z = df['x'][idx], df['y'][idx], df['z'][idx]
+    landmarks.update({landmark_name: [x, y, z]})
   
   return landmarks
 
