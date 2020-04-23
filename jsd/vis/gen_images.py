@@ -140,8 +140,8 @@ def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
     for i in range(3):
       dst_size[i] = int(np.round(src_size[i] * src_spacing[i] / dst_spacing[i]))
 
-    for landmark_name in landmarks[image_name].keys():
-      landmark_output_folder = os.path.join(output_folder, 'lm{}'.format(landmark_name), 'pictures')
+    for landmark_idx, landmark_name in enumerate(landmarks[image_name].keys()):
+      landmark_output_folder = os.path.join(output_folder, 'lm{}'.format(landmark_idx), 'pictures')
       if not os.path.isdir(landmark_output_folder):
         os.makedirs(landmark_output_folder)
         

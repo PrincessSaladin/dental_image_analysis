@@ -31,7 +31,7 @@ def parse_and_check_arguments():
   default_resolution = [1.5, 1.5, 1.5]
   default_contrast_range = None
   default_output_folder = '/mnt/projects/CT_Dental/results/model_0421_2020/landmark/test_set/html_report'
-  default_generate_pictures = False
+  default_generate_pictures = True
   
   parser = argparse.ArgumentParser(
     description='Snapshot three planes centered around landmarks.')
