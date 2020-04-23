@@ -7,17 +7,30 @@ from jsd.vis.gen_images import gen_plane_images, load_coordinates_from_csv
 from jsd.vis.gen_html_report import gen_html_report
 
 
+def read_landmark_names(landmark_names_file):
+  """
+  Read the landmark names from a csv file.
+  """
+  landmark_names_dict = {}
+  df = pd.read_csv(landmark_names_file)
+  landmark_idx = list(df['landmark_idx'])
+  landmark_name = list(df['landmark_name'])
+  for idx in range(len(landmark_idx)):
+    landmark_names_dict.update({idx: landmark_name[idx]})
+
+  return landmark_names_dict
+
+
 def parse_and_check_arguments():
   """
   Parse input arguments and raise error if invalid.
   """
-  default_image_folder = '/home/qinliu/projects/CT_Dental/data'
-  default_label_folder = '/home/qinliu/projects/CT_Dental/landmark'
-  default_detection_folder = '/home/qinliu/projects/CT_Dental/results/model_0411_2020'
-  default_landmark_names_file = '/home/qinliu/projects/CT_Dental/landmark/landmark_name.csv'
+  default_image_folder = '/mnt/projects/CT_Dental/data'
+  default_label_folder = '/mnt/projects/CT_Dental/landmark'
+  default_detection_folder = '/mnt/projects/CT_Dental/results/model_0421_2020/landmark/test_set'
   default_resolution = [1.5, 1.5, 1.5]
   default_contrast_range = None
-  default_output_folder = '/tmp/data/CT_Dental/landmark_html'
+  default_output_folder = '/mnt/projects/CT_Dental/results/model_0421_2020/landmark/test_set/html_report'
   default_generate_pictures = False
   
   parser = argparse.ArgumentParser(
@@ -31,9 +44,6 @@ def parse_and_check_arguments():
   parser.add_argument('--detection_folder', type=str,
                       default=default_detection_folder,
                       help='A folder where CSV files containing detected or baseline landmark coordinates are stored.')
-  parser.add_argument('--landmark_names_file', type=str,
-                      default=default_landmark_names_file,
-                      help='A CSV file containing landmark names.')
   parser.add_argument('--resolution', type=list,
                       default=default_resolution,
                       help="Resolution of the snap shot images.")
@@ -48,20 +58,6 @@ def parse_and_check_arguments():
                       help='Folder containing the generated snapshot images.')
   
   return parser.parse_args()
-
-
-def read_landmark_names(landmark_names_file):
-  """
-  Read the landmark names from a csv file.
-  """
-  landmark_names_dict = {}
-  df = pd.read_csv(landmark_names_file)
-  landmark_idx = list(df['landmark_idx'])
-  landmark_name = list(df['landmark_name'])
-  for idx in range(len(landmark_idx)):
-    landmark_names_dict.update({idx:landmark_name[idx]})
-  
-  return landmark_names_dict
 
 
 if __name__ == '__main__':
@@ -111,7 +107,7 @@ if __name__ == '__main__':
       label_landmark_csvs.append(os.path.join(label_landmark_csvs_folder, basename))
       detection_landmark_csvs.append(os.path.join(detection_landmark_csvs_folder, basename))
     
-    print("# landmark files in the both folder: {}".format(
+    print("# landmark files in both folders: {}".format(
       len(detection_landmark_csvs)))
     
   label_landmarks = {}
@@ -130,13 +126,42 @@ if __name__ == '__main__':
       landmarks = load_coordinates_from_csv(detection_landmark_csv)
       detection_landmarks.update({file_name: landmarks})
 
+    # only consider the images and landmarks in both set
+    detection_image_names = set(detection_landmarks.keys())
+    label_image_names = set(label_landmarks.keys())
+    image_names = detection_image_names & label_image_names
+
+    detection_landmark_names = set(detection_landmarks[list(image_names)[0]].keys())
+    label_landmark_names = set(label_landmarks[list(image_names)[0]].keys())
+    landmark_names = label_landmark_names & detection_landmark_names
+
+    _detection_landmarks = {}
+    for case in image_names:
+      __detection_landmarks = {}
+      for landmark_name in detection_landmarks[case].keys():
+        if landmark_name in landmark_names:
+          __detection_landmarks.update({landmark_name: detection_landmarks[case][landmark_name]})
+      _detection_landmarks.update({case: __detection_landmarks})
+    detection_landmarks = _detection_landmarks
+
+    _label_landmarks = {}
+    for case in image_names:
+      __label_landmarks = {}
+      for landmark_name in label_landmarks[case].keys():
+        if landmark_name in landmark_names:
+          __label_landmarks.update({landmark_name: label_landmarks[case][landmark_name]})
+      _label_landmarks.update({case: __label_landmarks})
+    label_landmarks = _label_landmarks
+
+    print("# landmarks in each landmark files in both folders: {}".format(
+      len(landmark_names)))
+
   # Generate landmark html report for each landmark.
   landmark_list = [label_landmarks]
   if usage_flag == 2:
     landmark_list.append(detection_landmarks)
 
-  landmark_names_dict = read_landmark_names(args.landmark_names_file)
-  gen_html_report(landmark_list, landmark_names_dict, usage_flag, args.output_folder)
+  gen_html_report(landmark_list, usage_flag, args.output_folder)
   
   if args.generate_pictures:
     print('Start generating planes for the labelled landmarks.')
