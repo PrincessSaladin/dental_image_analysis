@@ -181,7 +181,10 @@ def segmentation(input_path, model_folder, output_folder, gpu_id, save_prob):
         file_name_list, file_path_list = read_test_folder(input_path)
 
     else:
-        raise ValueError('Unsupported input path.')
+        if input_path.endswith('.csv'):
+            raise ValueError('The file doest no exist: {}.'.format(input_path))
+        else:
+            raise ValueError('Unsupported input path.')
 
     if not os.path.isdir(output_folder):
         os.makedirs(output_folder)
