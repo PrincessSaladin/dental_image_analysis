@@ -44,12 +44,15 @@ def split_dataset():
     for landmark_file in landmark_files:
         image_names_with_landmark.append(landmark_file.split('.')[0])
 
-    server_root = '/mnt/projects/CT_Dental'
-    # server_root = '/shenlab/lab_stor6/projects/CT_Dental'
+    type = 'server'
+    # server_root = '/mnt/projects/CT_Dental'
+    server_root = '/shenlab/lab_stor6/projects/CT_Dental'
+    save_folder = '/mnt/projects/CT_Dental/dataset/landmark_detection'
     server_image_folder = os.path.join(server_root, 'data')
     server_landmark_folder = os.path.join(server_root, 'landmark')
     server_landmark_mask_folder = os.path.join(server_root, 'landmark_mask/batch_1_2mm')
 
+    # generate dataset for the training
     content = []
     training_names = list(set(training_image_names) & set(image_names_with_landmark))
     training_names.sort()
@@ -60,7 +63,23 @@ def split_dataset():
         landmark_mask_path = os.path.join(server_landmark_mask_folder, '{}.mha'.format(name))
         content.append([name, image_path, mask_path, landmark_file_path, landmark_mask_path])
 
-    csv_file_path = '/mnt/projects/CT_Dental/dataset/landmark_detection/train_local.csv'
+    csv_file_path = os.path.join(save_folder, 'train_{}.csv'.format(type))
+    columns = ['image_name', 'image_path', 'organ_mask_path', 'landmark_file_path', 'landmark_mask_path']
+    df = pd.DataFrame(data=content, columns=columns)
+    df.to_csv(csv_file_path, index=False)
+
+    # generate dataset for test
+    content = []
+    test_names = list(set(image_names_with_landmark) - set(training_image_names))
+    test_names.sort()
+    for name in test_names:
+        image_path = os.path.join(server_image_folder, name, 'org.mha')
+        mask_path = os.path.join(server_image_folder, name, 'seg.mha')
+        landmark_file_path = os.path.join(server_landmark_folder, '{}.csv'.format(name))
+        landmark_mask_path = os.path.join(server_landmark_mask_folder, '{}.mha'.format(name))
+        content.append([name, image_path, mask_path, landmark_file_path, landmark_mask_path])
+
+    csv_file_path = os.path.join(save_folder, 'test_{}.csv'.format(type))
     columns = ['image_name', 'image_path', 'organ_mask_path', 'landmark_file_path', 'landmark_mask_path']
     df = pd.DataFrame(data=content, columns=columns)
     df.to_csv(csv_file_path, index=False)
