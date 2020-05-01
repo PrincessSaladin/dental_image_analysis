@@ -47,7 +47,15 @@ def mask_to_mesh(image_path, stl_path, label):
     :return:
     """
     # read the file
-    reader = vtk.vtkNIFTIImageReader()
+    if image_path.endswith('.nii.gz'):
+        reader = vtk.vtkNIFTIImageReader()
+
+    elif image_path.endswith('.mha') or image_path.endswith('.mhd'):
+        reader = vtk.vtkMetaImageReader()
+
+    else:
+        raise ValueError('Unsupported image type.')
+
     reader.SetFileName(image_path)
     reader.Update()
 
