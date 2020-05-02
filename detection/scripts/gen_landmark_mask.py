@@ -80,10 +80,11 @@ def gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label
 
 
 def gen_landmark_batch_1_2mm():
+  batch_idx = 3
   image_folder = '/mnt/projects/CT_Dental/data'
   landmark_folder = '/mnt/projects/CT_Dental/landmark'
-  landmark_mask_save_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_1_2.0mm'
-  landmark_label_file = '/home/ql/projects/dental_image_analysis/detection/scripts/batch_1_2mm.csv'
+  landmark_mask_save_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_{}_2.0mm'.format(batch_idx)
+  landmark_label_file = '/home/ql/projects/dental_image_analysis/detection/scripts/batch_{}_2mm.csv'.format(batch_idx)
   spacing = [2.0, 2.0, 2.0]  # mm
   pos_upper_bound = 3  # voxel
   neg_lower_bound = 6  # voxel
@@ -118,7 +119,7 @@ def gen_landmark_batch_1_0_4mm():
 
 if __name__ == '__main__':
 
-  steps = [2]
+  steps = [1]
 
   if 1 in steps:
     gen_landmark_batch_1_2mm()
