@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 from segmentation3d.utils.file_io import readlines
-from segmentation3d.seg_infer import read_test_txt
+from segmentation3d.core.seg_infer import read_test_txt
 
 
 def read_train_txt(imlist_file):
