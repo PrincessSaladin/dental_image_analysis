@@ -54,8 +54,9 @@ def load_coordinates_from_csv(csv_file):
   landmarks = OrderedDict()
   df = pd.read_csv(csv_file)
   for idx in range(len(df)):
-    landmark = df.loc[idx]
-    landmarks.update({idx: [landmark[0], landmark[1], landmark[2]]})
+    landmark_name = df['name'][idx]
+    x, y, z = df['x'][idx], df['y'][idx], df['z'][idx]
+    landmarks.update({landmark_name: [x, y, z]})
   
   return landmarks
 
@@ -92,7 +93,7 @@ def extract_planes_from_volume(src_data, src_dimension, src_resolution,
   # then Z-axis. Hence, we switch the order of y and x to make sure the
   # grid point coordinates are in correct order of (x,y,z).
   dst_axial_y, dst_axial_x, dst_axial_z = np.meshgrid(
-    dst_y, dst_x, [dst_point[2] * dst_resolution[2] / src_resolution[2]])
+    dst_y, dst_x, [min(dst_point[2] * dst_resolution[2] / src_resolution[2], src_dimension[2] - 1)])
 
   dst_axial_interp = itp.interpn(
     (src_x, src_y, src_z), src_data, (dst_axial_x, dst_axial_y, dst_axial_z))
@@ -101,7 +102,7 @@ def extract_planes_from_volume(src_data, src_dimension, src_resolution,
 
   # Extract the coronal plane from the source data passing through the dst point.
   dst_coronal_y, dst_coronal_x, dst_coronal_z = np.meshgrid(
-    [dst_point[1] * dst_resolution[1] / src_resolution[1]], dst_x, dst_z)
+    [min(dst_point[1] * dst_resolution[1] / src_resolution[1], src_dimension[1] - 1)], dst_x, dst_z)
 
   dst_coronal_interp = itp.interpn(
     (src_x, src_y, src_z), src_data, (dst_coronal_x, dst_coronal_y, dst_coronal_z))
@@ -110,7 +111,7 @@ def extract_planes_from_volume(src_data, src_dimension, src_resolution,
 
   # Extract the sagittal plane from the source data passing through the dst point.
   dst_sagittal_y, dst_sagittal_x, dst_sagittal_z = np.meshgrid(
-    dst_y, [dst_point[0] * dst_resolution[0] / src_resolution[0]], dst_z)
+    dst_y, [min(dst_point[0] * dst_resolution[0] / src_resolution[0], src_dimension[0] - 1)], dst_z)
 
   dst_sagittal_interp = itp.interpn(
     (src_x, src_y, src_z), src_data, (dst_sagittal_x, dst_sagittal_y, dst_sagittal_z))
@@ -122,9 +123,9 @@ def extract_planes_from_volume(src_data, src_dimension, src_resolution,
 
 def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
                      output_image_spacing, output_folder):
-  
-  for idx, image_name in enumerate(list(landmarks.keys())):
-    
+  image_name_list = list(landmarks.keys())
+  image_name_list.sort()
+  for idx, image_name in enumerate(image_name_list):
     print("Generate plane images for {}.".format(image_name))
     assert len(landmarks[image_name].keys()) > 0
     
@@ -137,10 +138,10 @@ def gen_plane_images(image_folder, landmarks, image_type, output_contrast_range,
     dst_spacing = np.array(output_image_spacing, dtype=np.float32)
     dst_size = np.zeros(3, dtype=int)
     for i in range(3):
-      dst_size[i] = int(np.round(src_size[i] * src_spacing[i] / dst_spacing[i]))
+      dst_size[i] = int(np.ceil(src_size[i] * src_spacing[i] / dst_spacing[i]))
 
-    for landmark_name in landmarks[image_name].keys():
-      landmark_output_folder = os.path.join(output_folder, 'lm{}'.format(landmark_name), 'pictures')
+    for landmark_idx, landmark_name in enumerate(landmarks[image_name].keys()):
+      landmark_output_folder = os.path.join(output_folder, 'lm{}'.format(landmark_idx), 'pictures')
       if not os.path.isdir(landmark_output_folder):
         os.makedirs(landmark_output_folder)
         

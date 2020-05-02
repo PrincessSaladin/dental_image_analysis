@@ -32,7 +32,7 @@ def error_analysis(label_landmark, detection_landmark, decending=True):
   error_dx, error_dy, error_dz, error_l2 = {}, {}, {}, {}
   mean_error_tp, std_error_tp, median_error_tp, max_error_tp = {}, {}, {}, {}
   error_sorted_index, error_type, all_cases = {}, {}, {}
-  for landmark_name in labelled_landmarks_stat.keys():
+  for landmark_name in detected_landmarks_stat.keys():
     tp_cases_list = list(set(detected_landmarks_stat[landmark_name]['pos']) &
                     set(labelled_landmarks_stat[landmark_name]['pos']))
     tn_cases_list = list(set(detected_landmarks_stat[landmark_name]['neg']) &

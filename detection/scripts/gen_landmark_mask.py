@@ -4,7 +4,7 @@ import numpy as np
 import os
 import pandas as pd
 
-from segmentation3d.dataloader.image_tools import resample_spacing
+from segmentation3d.utils.image_tools import resample_spacing
 
 
 def gen_single_landmark_mask(ref_image, landmark_df, spacing, pos_upper_bound, neg_lower_bound):
@@ -43,39 +43,18 @@ def gen_single_landmark_mask(ref_image, landmark_df, spacing, pos_upper_bound, n
   return landmark_mask
 
 
-def gen_landmark_batch_1_2mm():
-  target_landmark_label = {
-    'S': 1,
-    'Gb': 2,
-    'Rh': 4,
-    'Ft-R': 7,
-    'Ft-L': 8,
-    'Ba': 21,
-    'FMP': 22,
-    'Zy-R': 30,
-    'Zy-L': 33,
-    'U0': 44,
-    'Me': 83,
-    'L7DBC-R': 135,
-    'L7DBC-L': 136
-  }
-
-  spacing = [2, 2, 2]  # mm
-  pos_upper_bound = 3  # voxel
-  neg_lower_bound = 6  # voxel
+def gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label,
+                            spacing, pos_upper_bound, neg_lower_bound, landmark_mask_save_folder):
 
   # get image name list
-  landmark_folder = '/mnt/projects/CT_Dental/landmark'
   landmark_files = os.listdir(landmark_folder)
   image_names = []
   for landmark_file in landmark_files:
     if landmark_file.startswith('case'):
       image_names.append(landmark_file.split('.')[0])
 
-  image_folder = '/mnt/projects/CT_Dental/data'
-  image_out_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_1_2mm'
-  if not os.path.isdir(image_out_folder):
-    os.makedirs(image_out_folder)
+  if not os.path.isdir(landmark_mask_save_folder):
+    os.makedirs(landmark_mask_save_folder)
 
   for image_name in image_names:
     print(image_name)
@@ -97,7 +76,46 @@ def gen_landmark_batch_1_2mm():
       image, target_landmark_df, spacing, pos_upper_bound, neg_lower_bound
     )
 
-    sitk.WriteImage(landmark_mask, os.path.join(image_out_folder, '{}.mha'.format(image_name)))
+    sitk.WriteImage(landmark_mask, os.path.join(landmark_mask_save_folder, '{}.mha'.format(image_name)))
+
+
+def gen_landmark_batch_1_2mm():
+  batch_idx = 3
+  image_folder = '/mnt/projects/CT_Dental/data'
+  landmark_folder = '/mnt/projects/CT_Dental/landmark'
+  landmark_mask_save_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_{}_2.0mm'.format(batch_idx)
+  landmark_label_file = '/home/ql/projects/dental_image_analysis/detection/scripts/batch_{}_2mm.csv'.format(batch_idx)
+  spacing = [2.0, 2.0, 2.0]  # mm
+  pos_upper_bound = 3  # voxel
+  neg_lower_bound = 6  # voxel
+
+  landmark_label_df = pd.read_csv(landmark_label_file)
+  target_landmark_label = {}
+  for row in landmark_label_df.iterrows():
+    target_landmark_label.update({row[1]['landmark_name']: row[1]['landmark_label']})
+
+  gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label, spacing,
+                          pos_upper_bound, neg_lower_bound, landmark_mask_save_folder)
+
+
+def gen_landmark_batch_1_0_4mm():
+  image_folder = '/mnt/projects/CT_Dental/data'
+  landmark_folder = '/mnt/projects/CT_Dental/landmark'
+  landmark_mask_save_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_1_0.4mm'
+  landmark_label_file = '/home/ql/projects/dental_image_analysis/detection/scripts/batch_1.csv'
+  spacing = [0.4, 0.4, 0.4]  # mm
+  pos_upper_bound = 3  # voxel
+  neg_lower_bound = 6  # voxel
+
+  landmark_label_df = pd.read_csv(landmark_label_file)
+  target_landmark_label = {}
+  for row in landmark_label_df.iterrows():
+    target_landmark_label.update({row[1]['landmark_name']: row[1]['landmark_label']})
+
+  gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label, spacing,
+                          pos_upper_bound, neg_lower_bound, landmark_mask_save_folder)
+
+
 
 if __name__ == '__main__':
 
@@ -105,3 +123,6 @@ if __name__ == '__main__':
 
   if 1 in steps:
     gen_landmark_batch_1_2mm()
+
+  if 2 in steps:
+    gen_landmark_batch_1_0_4mm()

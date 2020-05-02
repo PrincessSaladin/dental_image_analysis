@@ -14,29 +14,28 @@ def add_document_text(original_text, new_text_to_add):
   return original_text + r'+"{0}"'.format(new_text_to_add)
 
 
-def write_summary_csv_report_for_all_landmarks(error_summary, csv_file_path, landmark_names):
+def write_summary_csv_report_for_all_landmarks(error_summary, csv_file_path):
   """
   Write a html report for all landmarks to summary the detection results
   """
   summary = []
-  for landmark_idx in error_summary.all_cases.keys():
-    num_pos_cases = len(error_summary.tp_cases[landmark_idx]) + \
-                    len(error_summary.fn_cases[landmark_idx])
-    num_neg_cases = len(error_summary.tn_cases[landmark_idx]) + \
-                    len(error_summary.fp_cases[landmark_idx])
-    if len(error_summary.tp_cases[landmark_idx]) == 0 and num_pos_cases == 0:
+  for landmark_idx, landmark_name in enumerate(error_summary.all_cases.keys()):
+    num_pos_cases = len(error_summary.tp_cases[landmark_name]) + \
+                    len(error_summary.fn_cases[landmark_name])
+    num_neg_cases = len(error_summary.tn_cases[landmark_name]) + \
+                    len(error_summary.fp_cases[landmark_name])
+    if len(error_summary.tp_cases[landmark_name]) == 0 and num_pos_cases == 0:
       tpr = 100
     else:
-      tpr = len(error_summary.tp_cases[landmark_idx]) / max(1, num_pos_cases) * 100
-    if len(error_summary.tn_cases[landmark_idx]) and num_neg_cases == 0:
+      tpr = len(error_summary.tp_cases[landmark_name]) / max(1, num_pos_cases) * 100
+    if len(error_summary.tn_cases[landmark_name]) and num_neg_cases == 0:
       tnr = 100
     else:
-      tnr = len(error_summary.tn_cases[landmark_idx]) / max(1, num_neg_cases) * 100
-    mean_error = error_summary.mean_error_tp[landmark_idx]
-    std_error = error_summary.std_error_tp[landmark_idx]
-    median_error = error_summary.median_error_tp[landmark_idx]
-    max_error = error_summary.max_error_tp[landmark_idx]
-    landmark_name = landmark_names[landmark_idx]
+      tnr = len(error_summary.tn_cases[landmark_name]) / max(1, num_neg_cases) * 100
+    mean_error = error_summary.mean_error_tp[landmark_name]
+    std_error = error_summary.std_error_tp[landmark_name]
+    median_error = error_summary.median_error_tp[landmark_name]
+    max_error = error_summary.max_error_tp[landmark_name]
     summary.append([landmark_idx, landmark_name, num_pos_cases, num_neg_cases,
                     tpr, tnr, mean_error, std_error, median_error, max_error])
   
@@ -104,22 +103,9 @@ def add_three_images(document_text, image_link_template, image_folder, images, w
   return document_text
 
 
-def gen_html_report(landmarks_list, landmark_names, usage_flag, output_folder):
+def gen_html_report(landmarks_list, usage_flag, output_folder):
   """
   Generate landmark evaluation HTML report.
-  Input arguments:
-    file_name_list:   The list of 3D volume file names including postfix.
-    point_dicts:      A list of dicts containing the labelled(detected,experiment) points' coordinates.
-    additional_info:  A dict containing the information of no_landmark, false positives
-                      and miss detections.
-    usage_flag:       A integer indicating the usage of the html tool.
-                      1 for ground truth only
-                      2 for error analysis
-                      3 for benchmark comparison
-    output_folder:    The output folder containing the html report.
-    image_folder:     The image folder containing the captured 2D plane images.
-                      Must be a relative path to the output_folder.
-    html_report_name: The HTML report file name.
   """
   labelled_landmarks = landmarks_list[0]
 
@@ -131,8 +117,8 @@ def gen_html_report(landmarks_list, landmark_names, usage_flag, output_folder):
     error_summary = error_analysis(labelled_landmarks, detected_landmarks)
 
   landmark_name_list = labelled_landmarks[list(labelled_landmarks.keys())[0]].keys()
-  for landmark_idx in landmark_name_list:
-    print("Generating html report for landmark {}.".format(landmark_idx))
+  for landmark_idx, landmark_name in enumerate(landmark_name_list):
+    print("Generating html report for landmark {}: {}.".format(landmark_idx, landmark_name))
     image_link_template = r"<div class='content'><img border=0  src= '{0}'  hspace=1  width={1} class='pic'></div>"
     error_info_template = r'<b>Labelled</b>: [{0:.2f}, {1:.2f}, {2:.2f}];'
     document_text = r'"<h1>check predicted coordinates:</h1>"'
@@ -141,26 +127,26 @@ def gen_html_report(landmarks_list, landmark_names, usage_flag, output_folder):
     if usage_flag == 1:
       image_list = list(labelled_landmarks.keys())
       for image_idx, image_name in enumerate(image_list):
-        label_landmark_world = labelled_landmarks[image_name][landmark_idx]
+        label_landmark_world = labelled_landmarks[image_name][landmark_name]
         document_text = \
           gen_row_for_html(usage_flag, image_link_template, error_info_template,
                            document_text, image_list, image_idx, landmark_idx,
                            [label_landmark_world], None)
         
     elif usage_flag == 2:
-      image_list = error_summary.all_cases[landmark_idx]
+      image_list = error_summary.all_cases[landmark_name]
       error_sorted_index = error_summary.error_sorted_index
-      for image_idx in error_sorted_index[landmark_idx]:
+      for image_idx in error_sorted_index[landmark_name]:
         image_name = image_list[image_idx]
-        label_landmark_world = labelled_landmarks[image_name][landmark_idx]
-        detected_landmark_world = detected_landmarks[image_name][landmark_idx]
+        label_landmark_world = labelled_landmarks[image_name][landmark_name]
+        detected_landmark_world = detected_landmarks[image_name][landmark_name]
         error_info_template = r'<b>Labelled</b>: [{0:.2f}, {1:.2f}, {2:.2f}];'
         error_info_template += r'<b>Detected</b>: [{3:.2f}, {4:.2f}, {5:.2f}];  '
         error_info_template += r'<b>Type</b>: {6};'
         error_info_template += r'<b>Error</b>: x:{7:.2f}; y:{8:.2f}; z:{9:.2f}; L2:{10:.2f};'
         document_text = \
           gen_row_for_html(usage_flag, image_link_template, error_info_template,
-                           document_text, image_list, image_idx, landmark_idx,
+                           document_text, image_list, image_idx, landmark_name,
                            [label_landmark_world, detected_landmark_world],
                             error_summary)
 
@@ -169,16 +155,16 @@ def gen_html_report(landmarks_list, landmark_names, usage_flag, output_folder):
 
     if usage_flag == 1:
       analysis_text = gen_analysis_text(len(image_list), usage_flag,
-                                        labelled_landmarks, landmark_idx, landmark_names, None)
+                                        labelled_landmarks, landmark_name, None)
 
     elif usage_flag == 2:
       analysis_text = gen_analysis_text(len(image_list), usage_flag,
-                                        labelled_landmarks, landmark_idx, landmark_names, error_summary)
+                                        labelled_landmarks, landmark_name, error_summary)
 
     else:
       raise ValueError('Undefined usage float!')
 
-    html_report_name = 'result_analysis.html'.format(landmark_idx)
+    html_report_name = 'result_analysis.html'
     html_report_folder = os.path.join(output_folder, 'lm{}'.format(landmark_idx))
     if not os.path.isdir(html_report_folder):
       os.makedirs(html_report_folder)
@@ -189,32 +175,32 @@ def gen_html_report(landmarks_list, landmark_names, usage_flag, output_folder):
   if usage_flag == 2:
     summary_csv_report_name = 'summary.csv'
     summary_csv_path = os.path.join(output_folder, summary_csv_report_name)
-    write_summary_csv_report_for_all_landmarks(error_summary, summary_csv_path, landmark_names)
+    write_summary_csv_report_for_all_landmarks(error_summary, summary_csv_path)
 
 
-def gen_analysis_text(num_data, usage_flag, labelled_landmark, landmark_idx, landmark_names, error_summary):
+def gen_analysis_text(num_data, usage_flag, labelled_landmark, landmark_name, error_summary):
   """
   Generate error analysis text for the html report.
   """
   analysis_text = r'<p style="color:red;">Basic information:</p>'
-  analysis_text += '<p style="color:black;">Landmark name: {0}.</p>'.format(landmark_names[landmark_idx])
+  analysis_text += '<p style="color:black;">Landmark name: {0}.</p>'.format(landmark_name)
   analysis_text += '<p style="color:black;"># cases in total: {0}.</p>'.format(num_data)
   labelled_landmarks_stat = get_landmarks_stat(labelled_landmark)
   
   analysis_text += r'<p style="color:black;"># cases having this landmark (Pos. cases): {0}.</p>'.format(
-    len(labelled_landmarks_stat[landmark_idx]['pos']))
+    len(labelled_landmarks_stat[landmark_name]['pos']))
   analysis_text += r'<p style="color:black;"># cases missing this landmark (Neg. cases): {}.</p>'.format(
-    len(labelled_landmarks_stat[landmark_idx]['neg']))
-  if len(labelled_landmarks_stat[landmark_idx]['neg']) > 0:
-    missing_cases = copy.deepcopy(labelled_landmarks_stat[landmark_idx]['neg'])
+    len(labelled_landmarks_stat[landmark_name]['neg']))
+  if len(labelled_landmarks_stat[landmark_name]['neg']) > 0:
+    missing_cases = copy.deepcopy(labelled_landmarks_stat[landmark_name]['neg'])
     missing_cases.sort()
     analysis_text += r'{}'.format(missing_cases)
 
   if usage_flag == 2:
-    tp_cases = error_summary.tp_cases[landmark_idx]
-    tn_cases = error_summary.tn_cases[landmark_idx]
-    fp_cases = error_summary.fp_cases[landmark_idx]
-    fn_cases = error_summary.fn_cases[landmark_idx]
+    tp_cases = error_summary.tp_cases[landmark_name]
+    tn_cases = error_summary.tn_cases[landmark_name]
+    fp_cases = error_summary.fp_cases[landmark_name]
+    fn_cases = error_summary.fn_cases[landmark_name]
     num_pos_cases = len(tp_cases) + len(fn_cases)
     num_neg_cases = len(tn_cases) + len(fp_cases)
     # compute TPR, TNR, FPR, FNR
@@ -224,10 +210,10 @@ def gen_analysis_text(num_data, usage_flag, labelled_landmark, landmark_idx, lan
       if len(tn_cases) != 0 or num_neg_cases != 0 else 100
     FPR = 100 - TNR
     FNR = 100 - TPR
-    mean_error = error_summary.mean_error_tp[landmark_idx]
-    std_error = error_summary.std_error_tp[landmark_idx]
-    median_error = error_summary.median_error_tp[landmark_idx]
-    max_error = error_summary.max_error_tp[landmark_idx]
+    mean_error = error_summary.mean_error_tp[landmark_name]
+    std_error = error_summary.std_error_tp[landmark_name]
+    median_error = error_summary.median_error_tp[landmark_name]
+    max_error = error_summary.max_error_tp[landmark_name]
     analysis_text += r'<p style="color:red;"> Landmark classification error: </p>'
     analysis_text += r'<p style="color:black;">TP (TPR): {0} ({1:.2f}%)</p>'.format(
       len(tp_cases), TPR)

@@ -5,7 +5,7 @@ import SimpleITK as sitk
 import torch
 from torch.utils.data import Dataset
 
-from segmentation3d.dataloader.image_tools import select_random_voxels_in_multi_class_mask, \
+from segmentation3d.utils.image_tools import select_random_voxels_in_multi_class_mask, \
   crop_image, convert_image_to_tensor, get_image_frame
 from detection.utils.landmark_utils import is_world_coordinate_valid, is_voxel_coordinate_valid
 

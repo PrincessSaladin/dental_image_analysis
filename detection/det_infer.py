@@ -12,7 +12,7 @@ from easydict import EasyDict as edict
 
 from segmentation3d.utils.file_io import load_config
 from segmentation3d.utils.model_io import get_checkpoint_folder
-from segmentation3d.dataloader.image_tools import convert_image_to_tensor, convert_tensor_to_image, \
+from segmentation3d.utils.image_tools import convert_image_to_tensor, convert_tensor_to_image, \
     image_partition_by_fixed_size, resample_spacing, pick_largest_connected_component
 from segmentation3d.utils.normalizer import FixedNormalizer, AdaptiveNormalizer
 from detection.dataloader.dataset import read_image_list
@@ -181,7 +181,10 @@ def segmentation(input_path, model_folder, output_folder, gpu_id, save_prob):
         file_name_list, file_path_list = read_test_folder(input_path)
 
     else:
-        raise ValueError('Unsupported input path.')
+        if input_path.endswith('.csv'):
+            raise ValueError('The file doest no exist: {}.'.format(input_path))
+        else:
+            raise ValueError('Unsupported input path.')
 
     if not os.path.isdir(output_folder):
         os.makedirs(output_folder)
