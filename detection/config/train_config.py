@@ -18,8 +18,8 @@ __C.general.target_landmark_label = {
     'S': 1,
     'Gb': 2,
     'Rh': 4,
-    'Fz-R': 7,
-    'Fz-L': 8,
+    'Ft-R': 7,
+    'Ft-L': 8,
     'Ba': 21,
     'FMP': 22,
     'Zy-R': 30,
@@ -36,7 +36,7 @@ __C.general.target_organ_label = {
     'mandible': 2
 }
 
-__C.general.save_dir = '/shenlab/lab_stor6/qinliu/projects/CT_Dental/models/model_0420_2020'
+__C.general.save_dir = '/shenlab/lab_stor6/qinliu/projects/CT_Dental/models/model_0421_2020'
 
 __C.general.resume_epoch = -1
 
