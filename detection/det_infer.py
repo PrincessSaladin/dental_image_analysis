@@ -193,6 +193,10 @@ def segmentation(input_path, model_folder, output_folder, gpu_id, save_prob):
     for i, file_path in enumerate(file_path_list):
         print('{}: {}'.format(i, file_path))
 
+        if not os.path.isfile(file_path):
+            print('File {} does not exist!'.format(file_path))
+            continue
+
         # load image
         begin = time.time()
         image = sitk.ReadImage(file_path, sitk.sitkFloat32)
