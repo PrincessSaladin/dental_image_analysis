@@ -28,6 +28,9 @@ def read_train_txt(imlist_file):
 
 def split_dataset():
 
+    batch_idx = 1
+    spacing = str(2.0)
+
     # get all image names
     segmentation_dataset_folder = '/mnt/projects/CT_Dental/dataset/segmentation'
     train_list_file = os.path.join(segmentation_dataset_folder, 'train_server.txt')
@@ -42,15 +45,17 @@ def split_dataset():
     landmark_file_folder = '/mnt/projects/CT_Dental/landmark'
     landmark_files = os.listdir(landmark_file_folder)
     for landmark_file in landmark_files:
-        image_names_with_landmark.append(landmark_file.split('.')[0])
+        if landmark_file.endswith('.csv'):
+            image_names_with_landmark.append(landmark_file.split('.')[0])
 
     type = 'server'
-    # server_root = '/mnt/projects/CT_Dental'
-    server_root = '/shenlab/lab_stor6/projects/CT_Dental'
+    # folder_root = '/mnt/projects/CT_Dental'
+    folder_root = '/shenlab/lab_stor6/projects/CT_Dental'
     save_folder = '/mnt/projects/CT_Dental/dataset/landmark_detection'
-    server_image_folder = os.path.join(server_root, 'data')
-    server_landmark_folder = os.path.join(server_root, 'landmark')
-    server_landmark_mask_folder = os.path.join(server_root, 'landmark_mask/batch_1_2mm')
+    server_image_folder = os.path.join(folder_root, 'data')
+    server_landmark_folder = os.path.join(folder_root, 'landmark')
+    server_landmark_mask_folder = \
+        os.path.join(folder_root, 'landmark_mask/batch_{}_{}mm'.format(batch_idx, spacing))
 
     # generate dataset for the training
     content = []
@@ -63,7 +68,7 @@ def split_dataset():
         landmark_mask_path = os.path.join(server_landmark_mask_folder, '{}.mha'.format(name))
         content.append([name, image_path, mask_path, landmark_file_path, landmark_mask_path])
 
-    csv_file_path = os.path.join(save_folder, 'train_{}.csv'.format(type))
+    csv_file_path = os.path.join(save_folder, 'train_{}_{}.csv'.format(batch_idx, type))
     columns = ['image_name', 'image_path', 'organ_mask_path', 'landmark_file_path', 'landmark_mask_path']
     df = pd.DataFrame(data=content, columns=columns)
     df.to_csv(csv_file_path, index=False)
@@ -79,7 +84,7 @@ def split_dataset():
         landmark_mask_path = os.path.join(server_landmark_mask_folder, '{}.mha'.format(name))
         content.append([name, image_path, mask_path, landmark_file_path, landmark_mask_path])
 
-    csv_file_path = os.path.join(save_folder, 'test_{}.csv'.format(type))
+    csv_file_path = os.path.join(save_folder, 'test_{}_{}.csv'.format(batch_idx, type))
     columns = ['image_name', 'image_path', 'organ_mask_path', 'landmark_file_path', 'landmark_mask_path']
     df = pd.DataFrame(data=content, columns=columns)
     df.to_csv(csv_file_path, index=False)
