@@ -52,6 +52,7 @@ def gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label
   for landmark_file in landmark_files:
     if landmark_file.startswith('case'):
       image_names.append(landmark_file.split('.')[0])
+  image_names.sort()
 
   if not os.path.isdir(landmark_mask_save_folder):
     os.makedirs(landmark_mask_save_folder)
@@ -116,13 +117,33 @@ def gen_landmark_batch_1_0_4mm():
                           pos_upper_bound, neg_lower_bound, landmark_mask_save_folder)
 
 
+def gen_landmark_batch_4_0_4mm():
+  image_folder = '/mnt/projects/CT_Dental/data'
+  landmark_folder = '/mnt/projects/CT_Dental/landmark'
+  landmark_mask_save_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_4_0.4mm_lower_teeth'
+  landmark_label_file = '/home/ql/projects/dental_image_analysis/detection/scripts/batch_4_lower_teeth.csv'
+  spacing = [0.4, 0.4, 0.4]  # mm
+  pos_upper_bound = 3  # voxel
+  neg_lower_bound = 6  # voxel
+
+  landmark_label_df = pd.read_csv(landmark_label_file)
+  target_landmark_label = {}
+  for row in landmark_label_df.iterrows():
+    target_landmark_label.update({row[1]['landmark_name']: row[1]['landmark_label']})
+
+  gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label, spacing,
+                          pos_upper_bound, neg_lower_bound, landmark_mask_save_folder)
+
 
 if __name__ == '__main__':
 
-  steps = [1]
+  steps = [3]
 
   if 1 in steps:
     gen_landmark_batch_1_2mm()
 
   if 2 in steps:
     gen_landmark_batch_1_0_4mm()
+
+  if 3 in steps:
+    gen_landmark_batch_4_0_4mm()
