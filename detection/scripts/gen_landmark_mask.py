@@ -5,6 +5,7 @@ import os
 import pandas as pd
 
 from segmentation3d.utils.image_tools import resample_spacing
+from jsd.utils.landmark_utils import is_world_coordinate_valid, is_voxel_coordinate_valid
 
 
 def gen_single_landmark_mask(ref_image, landmark_df, spacing, pos_upper_bound, neg_lower_bound):
@@ -26,16 +27,12 @@ def gen_single_landmark_mask(ref_image, landmark_df, spacing, pos_upper_bound, n
                      landmark_voxel[1] + neg_lower_bound):
         for z in range(landmark_voxel[2] - neg_lower_bound,
                        landmark_voxel[2] + neg_lower_bound):
-          if x < 0 or x >= ref_image_size[0] or \
-             y < 0 or y >= ref_image_size[1] or \
-             z < 0 or z >= ref_image_size[2]:
-            continue
-
-          distance = np.linalg.norm(np.array([x, y, z], dtype=np.float32) - landmark_voxel)
-          if distance < pos_upper_bound:
-            landmark_mask_npy[z, y, x] = float(landmark_label)
-          elif distance < neg_lower_bound and abs(landmark_mask_npy[z, y, x]) < 1e-6:
-            landmark_mask_npy[z, y, x] = -1.0
+          if is_voxel_coordinate_valid([x, y, z], ref_image_size):
+            distance = np.linalg.norm(np.array([x, y, z], dtype=np.float32) - landmark_voxel)
+            if distance < pos_upper_bound:
+              landmark_mask_npy[z, y, x] = float(landmark_label)
+            elif distance < neg_lower_bound and abs(landmark_mask_npy[z, y, x]) < 1e-6:
+              landmark_mask_npy[z, y, x] = -1.0
 
   landmark_mask = sitk.GetImageFromArray(landmark_mask_npy)
   landmark_mask.CopyInformation(ref_image)
@@ -67,10 +64,11 @@ def gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label
       x = landmark_df[landmark_df['name'] == landmark_name]['x'].values[0]
       y = landmark_df[landmark_df['name'] == landmark_name]['y'].values[0]
       z = landmark_df[landmark_df['name'] == landmark_name]['z'].values[0]
-      target_landmark_df[landmark_name]['label'] = landmark_label
-      target_landmark_df[landmark_name]['x'] = float(x)
-      target_landmark_df[landmark_name]['y'] = float(y)
-      target_landmark_df[landmark_name]['z'] = float(z)
+      if is_world_coordinate_valid([x, y, z]):
+        target_landmark_df[landmark_name]['label'] = landmark_label
+        target_landmark_df[landmark_name]['x'] = float(x)
+        target_landmark_df[landmark_name]['y'] = float(y)
+        target_landmark_df[landmark_name]['z'] = float(z)
 
     image = sitk.ReadImage(os.path.join(image_folder, image_name, 'org.mha'))
     landmark_mask = gen_single_landmark_mask(
