@@ -55,16 +55,17 @@ def gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label
     os.makedirs(landmark_mask_save_folder)
 
   for image_name in image_names:
+    image_name = 'case_167_ct_normal'
     print(image_name)
     landmark_df = pd.read_csv(os.path.join(landmark_folder, '{}.csv'.format(image_name)))
     target_landmark_df = {}
     for landmark_name in target_landmark_label.keys():
-      target_landmark_df[landmark_name] = {}
       landmark_label = target_landmark_label[landmark_name]
       x = landmark_df[landmark_df['name'] == landmark_name]['x'].values[0]
       y = landmark_df[landmark_df['name'] == landmark_name]['y'].values[0]
       z = landmark_df[landmark_df['name'] == landmark_name]['z'].values[0]
       if is_world_coordinate_valid([x, y, z]):
+        target_landmark_df[landmark_name] = {}
         target_landmark_df[landmark_name]['label'] = landmark_label
         target_landmark_df[landmark_name]['x'] = float(x)
         target_landmark_df[landmark_name]['y'] = float(y)
@@ -115,12 +116,12 @@ def gen_landmark_batch_1_0_4mm():
                           pos_upper_bound, neg_lower_bound, landmark_mask_save_folder)
 
 
-def gen_landmark_batch_4_0_4mm():
+def gen_landmark_batch_4_lower_0_8mm_batch_1():
   image_folder = '/mnt/projects/CT_Dental/data'
   landmark_folder = '/mnt/projects/CT_Dental/landmark'
-  landmark_mask_save_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_4_0.4mm_lower_teeth'
-  landmark_label_file = '/home/ql/projects/dental_image_analysis/detection/scripts/batch_4_lower_teeth.csv'
-  spacing = [0.4, 0.4, 0.4]  # mm
+  landmark_mask_save_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_4_0.8mm_lower_teeth_batch_1'
+  landmark_label_file = '/home/ql/projects/dental_image_analysis/detection/scripts/batch_4_lower_teeth_0_8mm_batch_1.csv'
+  spacing = [0.8, 0.8, 0.8]  # mm
   pos_upper_bound = 3  # voxel
   neg_lower_bound = 6  # voxel
 
@@ -144,4 +145,4 @@ if __name__ == '__main__':
     gen_landmark_batch_1_0_4mm()
 
   if 3 in steps:
-    gen_landmark_batch_4_0_4mm()
+    gen_landmark_batch_4_lower_0_8mm_batch_1()
