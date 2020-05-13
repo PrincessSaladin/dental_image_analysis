@@ -55,7 +55,6 @@ def gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label
     os.makedirs(landmark_mask_save_folder)
 
   for image_name in image_names:
-    image_name = 'case_167_ct_normal'
     print(image_name)
     landmark_df = pd.read_csv(os.path.join(landmark_folder, '{}.csv'.format(image_name)))
     target_landmark_df = {}
