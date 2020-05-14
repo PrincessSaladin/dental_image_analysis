@@ -28,7 +28,7 @@ def write_summary_csv_report_for_all_landmarks(error_summary, csv_file_path):
       tpr = 100
     else:
       tpr = len(error_summary.tp_cases[landmark_name]) / max(1, num_pos_cases) * 100
-    if len(error_summary.tn_cases[landmark_name]) and num_neg_cases == 0:
+    if len(error_summary.tn_cases[landmark_name]) == 0 and num_neg_cases == 0:
       tnr = 100
     else:
       tnr = len(error_summary.tn_cases[landmark_name]) / max(1, num_neg_cases) * 100
