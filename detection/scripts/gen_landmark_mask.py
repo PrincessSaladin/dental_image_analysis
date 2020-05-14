@@ -118,8 +118,8 @@ def gen_landmark_batch_1_0_4mm():
 def gen_landmark_batch_4_lower_0_8mm_batch_1():
   image_folder = '/mnt/projects/CT_Dental/data'
   landmark_folder = '/mnt/projects/CT_Dental/landmark'
-  landmark_mask_save_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_4_0.8mm_lower_teeth_batch_1'
-  landmark_label_file = '/home/ql/projects/dental_image_analysis/detection/scripts/batch_4_lower_teeth_0_8mm_batch_1.csv'
+  landmark_mask_save_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_4_0.8mm_upper_teeth_batch_2'
+  landmark_label_file = '/home/ql/projects/dental_image_analysis/detection/scripts/batch_4_upper_teeth_0_8mm_batch_2.csv'
   spacing = [0.8, 0.8, 0.8]  # mm
   pos_upper_bound = 3  # voxel
   neg_lower_bound = 6  # voxel

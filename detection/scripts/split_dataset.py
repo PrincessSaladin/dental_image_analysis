@@ -28,8 +28,10 @@ def read_train_txt(imlist_file):
 
 def split_dataset():
 
-    batch_idx = 1
-    spacing = str(2.0)
+    batch_idx = '4_upper_2'
+    spacing = str(0.8)
+
+    skip_names = ['case_33_cbct_patient', 'case_44_cbct_patient', 'case_45_cbct_patient']
 
     # get all image names
     segmentation_dataset_folder = '/mnt/projects/CT_Dental/dataset/segmentation'
@@ -52,7 +54,7 @@ def split_dataset():
     # folder_root = '/mnt/projects/CT_Dental'
     folder_root = '/shenlab/lab_stor6/projects/CT_Dental'
     save_folder = '/mnt/projects/CT_Dental/dataset/landmark_detection'
-    server_image_folder = os.path.join(folder_root, 'data')
+    server_image_folder = os.path.join(folder_root, 'data_teeth')
     server_landmark_folder = os.path.join(folder_root, 'landmark')
     server_landmark_mask_folder = \
         os.path.join(folder_root, 'landmark_mask/batch_{}_{}mm'.format(batch_idx, spacing))
@@ -62,10 +64,13 @@ def split_dataset():
     training_names = list(set(training_image_names) & set(image_names_with_landmark))
     training_names.sort()
     for name in training_names:
+        if name in skip_names:
+            continue
         image_path = os.path.join(server_image_folder, name, 'org.mha')
         mask_path = os.path.join(server_image_folder, name, 'seg.mha')
         landmark_file_path = os.path.join(server_landmark_folder, '{}.csv'.format(name))
-        landmark_mask_path = os.path.join(server_landmark_mask_folder, '{}.mha'.format(name))
+        # landmark_mask_path = os.path.join(server_landmark_mask_folder, '{}.mha'.format(name))
+        landmark_mask_path = os.path.join(server_image_folder, name, 'seg_upper_2.mha')
         content.append([name, image_path, mask_path, landmark_file_path, landmark_mask_path])
 
     csv_file_path = os.path.join(save_folder, 'train_{}_{}.csv'.format(batch_idx, type))
@@ -78,10 +83,13 @@ def split_dataset():
     test_names = list(set(image_names_with_landmark) - set(training_image_names))
     test_names.sort()
     for name in test_names:
+        if name in skip_names:
+            continue
         image_path = os.path.join(server_image_folder, name, 'org.mha')
         mask_path = os.path.join(server_image_folder, name, 'seg.mha')
         landmark_file_path = os.path.join(server_landmark_folder, '{}.csv'.format(name))
-        landmark_mask_path = os.path.join(server_landmark_mask_folder, '{}.mha'.format(name))
+        # landmark_mask_path = os.path.join(server_landmark_mask_folder, '{}.mha'.format(name))
+        landmark_mask_path = os.path.join(server_image_folder, name, 'seg_upper_2.mha')
         content.append([name, image_path, mask_path, landmark_file_path, landmark_mask_path])
 
     csv_file_path = os.path.join(save_folder, 'test_{}_{}.csv'.format(batch_idx, type))

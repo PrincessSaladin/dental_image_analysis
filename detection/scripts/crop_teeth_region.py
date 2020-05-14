@@ -65,6 +65,7 @@ for csv_file_name in csv_file_names:
 
     if is_world_coord_l0_valid:
         image = sitk.ReadImage(os.path.join(image_folder, image_name, 'org.mha'))
+        mask = sitk.ReadImage(os.path.join(image_folder, image_name, 'org.mha'))
         assert isinstance(image, sitk.Image)
         image_size = image.GetSize()
         image_spacing = image.GetSpacing()
@@ -85,13 +86,15 @@ for csv_file_name in csv_file_names:
         crop_world_center = image.TransformContinuousIndexToPhysicalPoint(crop_voxel_center)
 
         cropped_image = crop_image(image, crop_world_center, [128, 128, 128], crop_spacing, 'LINEAR')
+        cropped_mask = crop_image(mask, crop_world_center, [128, 128, 128], crop_spacing, 'NN')
         if not os.path.isdir(os.path.join(cropped_image_save_folder, image_name)):
             os.makedirs(os.path.join(cropped_image_save_folder, image_name))
         # sitk.WriteImage(cropped_image, os.path.join(cropped_image_save_folder, image_name, 'org.mha'))
+        sitk.WriteImage(cropped_mask, os.path.join(cropped_image_save_folder, image_name, 'seg.mha'))
 
-        landmark_mask = sitk.ReadImage(os.path.join(landmark_mask_folder, '{}.mha'.format(image_name)))
-        cropped_landmark_mask = crop_image(landmark_mask, crop_world_center, [128, 128, 128], crop_spacing, 'NN')
-        sitk.WriteImage(cropped_landmark_mask, os.path.join(cropped_image_save_folder, image_name, 'seg_upper_2.mha'))
+        # landmark_mask = sitk.ReadImage(os.path.join(landmark_mask_folder, '{}.mha'.format(image_name)))
+        # cropped_landmark_mask = crop_image(landmark_mask, crop_world_center, [128, 128, 128], crop_spacing, 'NN')
+        # sitk.WriteImage(cropped_landmark_mask, os.path.join(cropped_image_save_folder, image_name, 'seg_upper_2.mha'))
 
     else:
         print('Landmark l0 is missing in {}'.format(image_name))
