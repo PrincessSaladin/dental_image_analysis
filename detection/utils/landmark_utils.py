@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 
 def is_voxel_coordinate_valid(coord_voxel, image_size):
@@ -24,3 +25,25 @@ def is_world_coordinate_valid(coord_world):
         return False
 
     return True
+
+
+def merge_landmark_files(landmark_files, merged_landmark_file):
+    """
+    Merge multiple landmark files into a single landmark file
+    :param landmark_files:
+    :param merged_landmark_file:
+    :return: None
+    """
+    assert isinstance(landmark_files, list)
+    assert merged_landmark_file.endswith('.csv')
+
+    if len(landmark_files) == 0:
+        return
+
+    landmark_df = pd.read_csv(landmark_files[0])
+    for idx in range(1, len(landmark_files)):
+        landmark_df_temp = pd.read_csv(landmark_files[idx])
+        landmark_df = pd.concat([landmark_df, landmark_df_temp], axis=0)
+
+    landmark_df.sort_values(by=['name'], inplace=True)
+    landmark_df.to_csv(merged_landmark_file, index=False)

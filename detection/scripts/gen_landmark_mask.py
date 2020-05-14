@@ -5,6 +5,7 @@ import os
 import pandas as pd
 
 from segmentation3d.utils.image_tools import resample_spacing
+from jsd.utils.landmark_utils import is_world_coordinate_valid, is_voxel_coordinate_valid
 
 
 def gen_single_landmark_mask(ref_image, landmark_df, spacing, pos_upper_bound, neg_lower_bound):
@@ -26,16 +27,12 @@ def gen_single_landmark_mask(ref_image, landmark_df, spacing, pos_upper_bound, n
                      landmark_voxel[1] + neg_lower_bound):
         for z in range(landmark_voxel[2] - neg_lower_bound,
                        landmark_voxel[2] + neg_lower_bound):
-          if x < 0 or x >= ref_image_size[0] or \
-             y < 0 or y >= ref_image_size[1] or \
-             z < 0 or z >= ref_image_size[2]:
-            continue
-
-          distance = np.linalg.norm(np.array([x, y, z], dtype=np.float32) - landmark_voxel)
-          if distance < pos_upper_bound:
-            landmark_mask_npy[z, y, x] = float(landmark_label)
-          elif distance < neg_lower_bound and abs(landmark_mask_npy[z, y, x]) < 1e-6:
-            landmark_mask_npy[z, y, x] = -1.0
+          if is_voxel_coordinate_valid([x, y, z], ref_image_size):
+            distance = np.linalg.norm(np.array([x, y, z], dtype=np.float32) - landmark_voxel)
+            if distance < pos_upper_bound:
+              landmark_mask_npy[z, y, x] = float(landmark_label)
+            elif distance < neg_lower_bound and abs(landmark_mask_npy[z, y, x]) < 1e-6:
+              landmark_mask_npy[z, y, x] = -1.0
 
   landmark_mask = sitk.GetImageFromArray(landmark_mask_npy)
   landmark_mask.CopyInformation(ref_image)
@@ -52,6 +49,7 @@ def gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label
   for landmark_file in landmark_files:
     if landmark_file.startswith('case'):
       image_names.append(landmark_file.split('.')[0])
+  image_names.sort()
 
   if not os.path.isdir(landmark_mask_save_folder):
     os.makedirs(landmark_mask_save_folder)
@@ -61,15 +59,16 @@ def gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label
     landmark_df = pd.read_csv(os.path.join(landmark_folder, '{}.csv'.format(image_name)))
     target_landmark_df = {}
     for landmark_name in target_landmark_label.keys():
-      target_landmark_df[landmark_name] = {}
       landmark_label = target_landmark_label[landmark_name]
       x = landmark_df[landmark_df['name'] == landmark_name]['x'].values[0]
       y = landmark_df[landmark_df['name'] == landmark_name]['y'].values[0]
       z = landmark_df[landmark_df['name'] == landmark_name]['z'].values[0]
-      target_landmark_df[landmark_name]['label'] = landmark_label
-      target_landmark_df[landmark_name]['x'] = float(x)
-      target_landmark_df[landmark_name]['y'] = float(y)
-      target_landmark_df[landmark_name]['z'] = float(z)
+      if is_world_coordinate_valid([x, y, z]):
+        target_landmark_df[landmark_name] = {}
+        target_landmark_df[landmark_name]['label'] = landmark_label
+        target_landmark_df[landmark_name]['x'] = float(x)
+        target_landmark_df[landmark_name]['y'] = float(y)
+        target_landmark_df[landmark_name]['z'] = float(z)
 
     image = sitk.ReadImage(os.path.join(image_folder, image_name, 'org.mha'))
     landmark_mask = gen_single_landmark_mask(
@@ -116,13 +115,33 @@ def gen_landmark_batch_1_0_4mm():
                           pos_upper_bound, neg_lower_bound, landmark_mask_save_folder)
 
 
+def gen_landmark_batch_4_lower_0_8mm_batch_1():
+  image_folder = '/mnt/projects/CT_Dental/data'
+  landmark_folder = '/mnt/projects/CT_Dental/landmark'
+  landmark_mask_save_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_4_0.8mm_upper_teeth_batch_2'
+  landmark_label_file = '/home/ql/projects/dental_image_analysis/detection/scripts/batch_4_upper_teeth_0_8mm_batch_2.csv'
+  spacing = [0.8, 0.8, 0.8]  # mm
+  pos_upper_bound = 3  # voxel
+  neg_lower_bound = 6  # voxel
+
+  landmark_label_df = pd.read_csv(landmark_label_file)
+  target_landmark_label = {}
+  for row in landmark_label_df.iterrows():
+    target_landmark_label.update({row[1]['landmark_name']: row[1]['landmark_label']})
+
+  gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label, spacing,
+                          pos_upper_bound, neg_lower_bound, landmark_mask_save_folder)
+
 
 if __name__ == '__main__':
 
-  steps = [1]
+  steps = [3]
 
   if 1 in steps:
     gen_landmark_batch_1_2mm()
 
   if 2 in steps:
     gen_landmark_batch_1_0_4mm()
+
+  if 3 in steps:
+    gen_landmark_batch_4_lower_0_8mm_batch_1()
