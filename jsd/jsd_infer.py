@@ -291,10 +291,10 @@ def main():
                      '2. A text file containing paths of all testing images\n' \
                      '3. A folder containing all testing images\n'
 
-  default_input = '/home/qinliu/projects/CT_Dental/datasets/test.txt'
-  default_model = '/home/qinliu/projects/CT_Dental/models/model_0405_2020'
-  default_output = '/home/qinliu/projects/CT_Dental/results/model_0405_2020'
-  default_gpu_id = -1
+  default_input = '/shenlab/lab_stor6/qinliu/CT_Dental/datasets/test_server.txt'
+  default_model = '/shenlab/lab_stor6/qinliu/CT_Dental/models/model_0411_2020'
+  default_output = '/shenlab/lab_stor6/qinliu/CT_Dental/results/model_0411_2020/epoch_2000'
+  default_gpu_id = 5
   
   parser = argparse.ArgumentParser(description=long_description)
   parser.add_argument('-i', '--input', default=default_input,

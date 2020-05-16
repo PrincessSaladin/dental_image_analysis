@@ -298,11 +298,11 @@ def main():
                        '2. A text file containing paths of all testing images\n' \
                        '3. A folder containing all testing images\n'
 
-    default_input = '/mnt/projects/CT_Dental/dataset/landmark_detection/test_local.csv'
-    default_model = '/mnt/projects/CT_Dental/models/model_0419_2020'
-    default_output = '/mnt/projects/CT_Dental/results/model_0419_2020'
+    default_input = '/shenlab/lab_stor6/projects/CT_Dental/dataset/landmark_detection/test_1_server.csv'
+    default_model = '/shenlab/lab_stor6/qinliu/projects/CT_Dental/models/model_0502_2020/batch_1'
+    default_output = '/shenlab/lab_stor6/qinliu/projects/CT_Dental/results/model_0502_2020/batch_1/test_set/'
     default_save_prob = False
-    default_gpu_id = -1
+    default_gpu_id = 5
 
     parser = argparse.ArgumentParser(description=long_description)
     parser.add_argument('-i', '--input', default=default_input,

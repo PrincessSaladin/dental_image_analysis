@@ -9,7 +9,7 @@ cfg = __C
 ##################################
 __C.general = {}
 
-__C.general.training_image_list_file = '/mnt/projects/CT_Dental/dataset/landmark_detection/train_local.csv'
+__C.general.training_image_list_file = '/shenlab/lab_stor6/projects/CT_Dental/dataset/landmark_detection/train_server.csv'
 
 __C.general.validation_image_list_file = ''
 
@@ -36,11 +36,11 @@ __C.general.target_organ_label = {
     'mandible': 2
 }
 
-__C.general.save_dir = '/mnt/projects/CT_Dental/models/model_0419_2020'
+__C.general.save_dir = '/shenlab/lab_stor6/qinliu/projects/CT_Dental/models/model_0421_2020'
 
 __C.general.resume_epoch = -1
 
-__C.general.num_gpus = 0
+__C.general.num_gpus = 1
 
 ##################################
 # dataset parameters
@@ -49,7 +49,7 @@ __C.dataset = {}
 
 __C.dataset.crop_spacing = [2, 2, 2]      # mm
 
-__C.dataset.crop_size = [48, 48, 48]   # voxel
+__C.dataset.crop_size = [96, 96, 96]   # voxel
 
 __C.dataset.sampling_size = [6, 6, 6]      # voxel
 
@@ -57,9 +57,9 @@ __C.dataset.positive_upper_bound = 3    # voxel
 
 __C.dataset.negative_lower_bound = 6    # voxel
 
-__C.dataset.num_pos_patches_per_image = 3
+__C.dataset.num_pos_patches_per_image = 6
 
-__C.dataset.num_neg_patches_per_image = 9
+__C.dataset.num_neg_patches_per_image = 12
 
 # crop intensity normalizers (to [-1,1])
 # one normalizer corresponds to one input modality
@@ -72,7 +72,7 @@ __C.dataset.crop_normalizers = [AdaptiveNormalizer()]
 # 2) MASK: sampling crops randomly within segmentation mask
 # 3) HYBRID: Sampling crops randomly with both GLOBAL and MASK methods
 # 4) CENTER: sampling crops in the image center
-__C.dataset.sampling_method = 'HYBRID'
+__C.dataset.sampling_method = 'CENTER'
 
 # linear interpolation method:
 # 1) NN: nearest neighbor interpolation
@@ -115,17 +115,17 @@ __C.net.name = 'vdnet'
 ##################################
 __C.train = {}
 
-__C.train.epochs = 101
+__C.train.epochs = 2001
 
-__C.train.batch_size = 1
+__C.train.batch_size = 6
 
-__C.train.num_threads = 1
+__C.train.num_threads = 6
 
 __C.train.lr = 1e-4
 
 __C.train.betas = (0.9, 0.999)
 
-__C.train.save_epochs = 10
+__C.train.save_epochs = 20
 
 ##################################
 # debug parameters
