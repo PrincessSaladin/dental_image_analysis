@@ -27,11 +27,11 @@ def parse_and_check_arguments():
   """
   default_image_folder = '/mnt/projects/CT_Dental/data'
   default_label_folder = '/mnt/projects/CT_Dental/landmark'
-  default_detection_folder = '/mnt/projects/CT_Dental/results/model_0421_2020/landmark/test_set'
+  default_detection_folder = '/mnt/projects/CT_Dental/results/model_0514_2020//batch_3/epoch_1000/test_set'
   default_resolution = [1.5, 1.5, 1.5]
   default_contrast_range = None
-  default_output_folder = '/mnt/projects/CT_Dental/results/model_0421_2020/landmark/test_set/html_report'
-  default_generate_pictures = True
+  default_output_folder = '/mnt/projects/CT_Dental/results/model_0514_2020//batch_3/epoch_1000/test_set/html_report'
+  default_generate_pictures = False
   
   parser = argparse.ArgumentParser(
     description='Snapshot three planes centered around landmarks.')

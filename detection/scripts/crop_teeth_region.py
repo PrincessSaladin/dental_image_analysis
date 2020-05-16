@@ -60,9 +60,6 @@ for csv_file_name in csv_file_names:
     is_world_coord_l0_valid = is_world_coordinate_valid(world_coord_l0)
 
     image_name = csv_file_name.split('.')[0]
-    # if image_name != 'case_25_cbct_patient':
-    #     continue
-
     if is_world_coord_l0_valid:
         image = sitk.ReadImage(os.path.join(image_folder, image_name, 'org.mha'))
         mask = sitk.ReadImage(os.path.join(image_folder, image_name, 'seg.mha'))

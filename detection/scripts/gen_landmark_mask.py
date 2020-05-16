@@ -79,7 +79,7 @@ def gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label
 
 
 def gen_landmark_batch_1_2mm():
-  batch_idx = 2
+  batch_idx = 3
   image_folder = '/mnt/projects/CT_Dental/data'
   landmark_folder = '/mnt/projects/CT_Dental/landmark'
   landmark_mask_save_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_{}_2.0mm'.format(batch_idx)

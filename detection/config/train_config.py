@@ -18,8 +18,8 @@ __C.general.target_landmark_label = {
     'S': 1,
     'Gb': 2,
     'Rh': 4,
-    'Fz-R': 7,
-    'Fz-L': 8,
+    'Ft-R': 7,
+    'Ft-L': 8,
     'Ba': 21,
     'FMP': 22,
     'Zy-R': 30,
@@ -72,7 +72,7 @@ __C.dataset.crop_normalizers = [AdaptiveNormalizer()]
 # 2) MASK: sampling crops randomly within segmentation mask
 # 3) HYBRID: Sampling crops randomly with both GLOBAL and MASK methods
 # 4) CENTER: sampling crops in the image center
-__C.dataset.sampling_method = 'CENTER'
+__C.dataset.sampling_method = 'HYBRID'
 
 # linear interpolation method:
 # 1) NN: nearest neighbor interpolation
@@ -136,4 +136,4 @@ __C.debug = {}
 __C.debug.seed = 0
 
 # whether to save input crops
-__C.debug.save_inputs = True
+__C.debug.save_inputs = False
