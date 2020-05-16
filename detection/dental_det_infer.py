@@ -106,13 +106,13 @@ def main():
                         help='input intensity images')
     parser.add_argument('-m', '--model', default=default_model,
                         help='model root folder')
-    parser.add_argument('-o', '--output', default=default_output,
-                        help='output folder for segmentation')
     parser.add_argument('-g', '--gpu_id', type=int, default=default_gpu_id,
                         help='the gpu id to run model, set to -1 if using cpu only.')
+    parser.add_argument('-o', '--output', default=default_output,
+                        help='output folder for segmentation')
 
     args = parser.parse_args()
-    dental_detection(args.input, args.model, args.output, args.gpu_id)
+    dental_detection(args.input, args.model, args.gpu_id, args.output)
 
 
 if __name__ == '__main__':
