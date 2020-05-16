@@ -65,7 +65,7 @@ for csv_file_name in csv_file_names:
 
     if is_world_coord_l0_valid:
         image = sitk.ReadImage(os.path.join(image_folder, image_name, 'org.mha'))
-        mask = sitk.ReadImage(os.path.join(image_folder, image_name, 'org.mha'))
+        mask = sitk.ReadImage(os.path.join(image_folder, image_name, 'seg.mha'))
         assert isinstance(image, sitk.Image)
         image_size = image.GetSize()
         image_spacing = image.GetSpacing()

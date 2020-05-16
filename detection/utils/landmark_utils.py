@@ -47,3 +47,17 @@ def merge_landmark_files(landmark_files, merged_landmark_file):
 
     landmark_df.sort_values(by=['name'], inplace=True)
     landmark_df.to_csv(merged_landmark_file, index=False)
+
+
+def merge_landmark_dataframes(landmark_dataframes):
+    """
+    Merge multiple landmark dataframes into a single landmark dataframe
+    :param landmark_dataframes: the list containing multiple dataframes
+    :return: the merged dataframe
+    """
+
+    merged_landmark_df = landmark_dataframes[0]
+    for idx in range(1, len(landmark_dataframes)):
+        merged_landmark_df = pd.concat([merged_landmark_df, landmark_dataframes[idx]], axis=0)
+
+    return merged_landmark_df

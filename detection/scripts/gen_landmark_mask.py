@@ -75,11 +75,11 @@ def gen_landmark_mask_batch(image_folder, landmark_folder, target_landmark_label
       image, target_landmark_df, spacing, pos_upper_bound, neg_lower_bound
     )
 
-    sitk.WriteImage(landmark_mask, os.path.join(landmark_mask_save_folder, '{}.mha'.format(image_name)))
+    sitk.WriteImage(landmark_mask, os.path.join(landmark_mask_save_folder, '{}.mha'.format(image_name)), True)
 
 
 def gen_landmark_batch_1_2mm():
-  batch_idx = 3
+  batch_idx = 2
   image_folder = '/mnt/projects/CT_Dental/data'
   landmark_folder = '/mnt/projects/CT_Dental/landmark'
   landmark_mask_save_folder = '/mnt/projects/CT_Dental/landmark_mask/batch_{}_2.0mm'.format(batch_idx)
@@ -135,7 +135,7 @@ def gen_landmark_batch_4_lower_0_8mm_batch_1():
 
 if __name__ == '__main__':
 
-  steps = [3]
+  steps = [1]
 
   if 1 in steps:
     gen_landmark_batch_1_2mm()
