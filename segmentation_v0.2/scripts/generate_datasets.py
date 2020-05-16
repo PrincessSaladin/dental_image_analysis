@@ -1,4 +1,4 @@
-# This script aims to generate datasets for segmentation_v2.0.
+# This script aims to generate datasets for segmentation_v0.2.
 import numpy as np
 import os
 import SimpleITK as sitk

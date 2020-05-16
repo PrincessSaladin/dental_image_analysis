@@ -12,7 +12,7 @@ cfg = __C
 
 __C.general = {}
 
-# image-segmentation_v1.0 pair list
+# image-segmentation_v0.1 pair list
 # 1) single-modality image training, use txt annotation file
 # 2) multi-modality image training, use csv annotation file
 __C.general.imseg_list = '/shenlab/lab_stor6/qinliu/CT_Dental/datasets/train.txt'
@@ -39,7 +39,7 @@ __C.dataset = {}
 # the number of classes
 __C.dataset.num_classes = 3
 
-# the resolution on which segmentation_v1.0 is performed
+# the resolution on which segmentation_v0.1 is performed
 __C.dataset.spacing = [1.0, 1.0, 2.0]
 
 # the sampling crop size, e.g., determine the context information
@@ -50,7 +50,7 @@ __C.dataset.default_values = [0]
 
 # sampling method:
 # 1) GLOBAL: sampling crops randomly in the entire image domain
-# 2) MASK: sampling crops randomly within segmentation_v1.0 mask
+# 2) MASK: sampling crops randomly within segmentation_v0.1 mask
 __C.dataset.sampling_method = 'MASK'
 
 # translation augmentation (unit: mm)
@@ -75,8 +75,8 @@ __C.dataset.crop_normalizers = [AdaptiveNormalizer(clip=False)]
 __C.loss = {}
 
 # the name of loss function to use
-# Focal: Focal loss, supports binary-class and multi-class segmentation_v1.0
-# Dice: Dice Similarity Loss, supports binary-class and multi-class segmentation_v1.0
+# Focal: Focal loss, supports binary-class and multi-class segmentation_v0.1
+# Dice: Dice Similarity Loss, supports binary-class and multi-class segmentation_v0.1
 __C.loss.name = 'Focal'
 
 # the weight for each class including background class
