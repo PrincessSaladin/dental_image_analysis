@@ -72,7 +72,7 @@ def dental_detection(input, model_folder, gpu_id, output_csv_file):
     """
     assert output_csv_file.endswith('.csv')
 
-    image = sitk.ReadImage(input)
+    image = sitk.ReadImage(input, sitk.sitkFloat32)
     image_name = os.path.basename(input)
 
     landmark_dataframes = []
