@@ -288,7 +288,7 @@ def segmentation(input_path, model_folder, output_folder, gpu_id, save_prob):
 
         saving_time = time.time() - begin
         print('read: {:.2f} s, prediction: {:.2f} s, saving: {:.2f} s'.format(
-            read_image_time, inference_time, saving_time)
+            read_image_time + load_model_time, inference_time, saving_time)
         )
 
 def main():

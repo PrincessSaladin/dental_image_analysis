@@ -1,11 +1,64 @@
 import argparse
 import os
 import SimpleITK as sitk
+import time
 
 from segmentation3d.utils.image_tools import crop_image
 from detection.core.det_infer import detection_single_image, load_det_model
 from detection.utils.landmark_utils import merge_landmark_dataframes
+from detection.core.det_infer import read_test_folder
+from detection.dataloader.dataset import read_image_list
 from jsd.utils.landmark_utils import is_voxel_coordinate_valid, is_world_coordinate_valid
+
+
+def dental_detection_batch(input_path, model_folder, gpu_id, output_folder):
+    """
+
+    :param input_path:
+    :return:
+    """
+    # load test images
+    if os.path.isfile(input_path):
+        if input_path.endswith('.csv'):
+            file_name_list, file_path_list = read_image_list(input_path, 'test')
+        else:
+            if input_path.endswith('.mhd') or input_path.endswith('.mha') or \
+                    input_path.endswith('.nii.gz') or input_path.endswith('.nii') or \
+                    input_path.endswith('.hdr') or input_path.endswith('.image3d'):
+                im_name = os.path.basename(input_path)
+                file_name_list = [im_name]
+                file_path_list = [input_path]
+
+            else:
+                raise ValueError('Unsupported input path.')
+
+    elif os.path.isdir(input_path):
+        file_name_list, file_path_list = read_test_folder(input_path)
+
+    else:
+        if input_path.endswith('.csv'):
+            raise ValueError('The file doest no exist: {}.'.format(input_path))
+        else:
+            raise ValueError('Unsupported input path.')
+
+    if not os.path.isdir(output_folder):
+        os.makedirs(output_folder)
+
+    # test each case
+    for i, file_path in enumerate(file_path_list):
+        print('{}: {}'.format(i, file_path))
+
+        if not os.path.isfile(file_path):
+            print('File {} does not exist!'.format(file_path))
+            continue
+
+        output_csv_file = os.path.join(output_folder, '{}.csv'.format(file_name_list[i]))
+        begin = time.time()
+        dental_detection(file_path, model_folder, gpu_id, output_csv_file)
+        prediction_time = time.time() - begin
+
+        print('Prediction: {:.2f} s'.format(prediction_time))
+
 
 
 def dental_detection(input, model_folder, gpu_id, output_csv_file):
@@ -25,6 +78,7 @@ def dental_detection(input, model_folder, gpu_id, output_csv_file):
     landmark_dataframes = []
 
     # detect batch 1
+    print('Start detecting the non-teeth landmarks ...')
     batch_1_model = load_det_model(os.path.join(model_folder, 'batch_1'))
     landmark_batch_1 = detection_single_image(image, image_name, batch_1_model, gpu_id, None, None)
     del batch_1_model
@@ -43,6 +97,7 @@ def dental_detection(input, model_folder, gpu_id, output_csv_file):
     landmark_dataframes.append(landmark_batch_3)
 
     # crop the teeth region according to landmark 'L0'
+    print('Start detecting the teeth landmarks')
     l0 = landmark_batch_3[landmark_batch_3['name'] == 'L0']
     world_coord_l0 = [l0['x'].values[0], l0['y'].values[0], l0['z'].values[0]]
     if is_world_coordinate_valid(world_coord_l0):
@@ -92,7 +147,6 @@ def dental_detection(input, model_folder, gpu_id, output_csv_file):
     merged_landmark_dataframes.to_csv(output_csv_file, index=False)
 
 
-
 def main():
     long_description = 'Inference engine for 3d medical image landmark detection' \
 
@@ -112,7 +166,7 @@ def main():
                         help='output folder for segmentation')
 
     args = parser.parse_args()
-    dental_detection(args.input, args.model, args.gpu_id, args.output)
+    dental_detection_batch(args.input, args.model, args.gpu_id, args.output)
 
 
 if __name__ == '__main__':
