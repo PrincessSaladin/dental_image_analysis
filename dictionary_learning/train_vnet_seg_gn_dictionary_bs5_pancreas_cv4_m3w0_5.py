@@ -546,7 +546,7 @@ def Train():
             losses_dis.append(loss_dis)
             losses_seg.append(loss_seg)
             
-            if np.mod(i_iter+1, 200//batchSize) == 0:
+            if np.mod(i_iter+1, samplesPerImageTrain//batchSize) == 0:
                 print('Epoch:{0:3d}, iter = {1:5d}, loss = {2:.4f}, loss_dis = {3:.4f}, losses_seg = {4:.4f}'.format(epoch+1, i_iter+1, np.mean(np.array(losses)), np.mean(np.array(losses_dis)), np.mean(np.array(losses_seg))))
                 losses = []
                 losses_dis = []
