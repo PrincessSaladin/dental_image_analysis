@@ -22,7 +22,7 @@ base_size = 64
 lambda_ce = 1
 lambda_dis = 0.5
 
-start_epoch = 12
+start_epoch = 0
 num_epochs = 40
 
 samplesPerImageTrain = 200
